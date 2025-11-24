@@ -15,9 +15,10 @@
   /* Theme variables from plan (Light) */
   --node-bg: #ffffff;
   --node-text: #000000;
-  --canvas-bg: #f0f0f0;
+  --canvas-bg: #ebebeb;
   --tone-light: #ffffff;
   --tone-dark: #333333;
+  --ghost-border: rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] {
@@ -28,6 +29,9 @@
   --node-bg: #1a1a1a;
   --node-text: rgba(255, 255, 255, 0.87);
   --canvas-bg: #242424;
+  --tone-light: #555; /* Add contrasting dark-gray for light tone border in dark mode */
+  --tone-dark: #ccc; /* Add contrasting light-gray for dark tone border in dark mode */
+  --ghost-border: rgba(255, 255, 255, 0.4);
 }
 
 a {

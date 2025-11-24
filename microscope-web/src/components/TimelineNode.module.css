@@ -1,0 +1,119 @@
+.node {
+  width: 100%; /* Fill the wrapper */
+  height: auto;
+  min-height: 150px; /* Per spec */
+  padding: 1rem;
+  
+  background-color: var(--node-bg, #ffffff);
+  color: var(--node-text, #000000);
+  
+  border-radius: 8px;
+  border: 8px solid transparent; /* Base border, color will be set by tone */
+  
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: sans-serif;
+  text-align: left;
+  
+  /* Smooth transitions for movement and visual state changes */
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 0.25rem; /* Add padding for editing */
+  text-align: center;
+}
+
+.description {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  padding: 0.25rem;
+  white-space: pre-wrap; /* Respect newlines in the description */
+}
+
+/* --- Tone Styles --- */
+
+.light {
+  border-color: var(--tone-light);
+}
+
+.dark {
+  border-color: var(--tone-dark);
+  /* "Hash" effect from the spec */
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.03) 10px,
+    rgba(0, 0, 0, 0.03) 20px
+  );
+}
+
+/* --- Ghost Style --- */
+.ghost {
+  border-width: 8px;
+  border-style: dotted;
+  border-color: var(--ghost-border);
+  backdrop-filter: blur(4px);
+  /* Don't set a background color here; let the blur work on what's behind it */
+}
+
+/* --- Button Styles --- */
+
+.button-group {
+  margin-top: auto; /* Pushes buttons to the bottom */
+  display: flex;
+  gap: 8px;
+  padding-top: 0.5rem;
+}
+
+.node .button {
+  flex-grow: 1;
+  padding: 0.5em 0.8em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  
+  background-color: var(--node-text);
+  color: var(--node-bg);
+  
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition: opacity 0.25s;
+}
+
+.node .button:hover {
+  opacity: 0.8;
+}
+
+/* --- SVG Connection Anchors --- */
+
+.anchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  background-color: transparent; /* Invisible */
+  pointer-events: none; /* Don't interfere with mouse events */
+}
+
+.left {
+  left: 0;
+}
+
+.right {
+  right: 0;
+}
+
+.top {
+  top: 0;
+}
+
+.bottom {
+  bottom: 0;
+}
