@@ -1,0 +1,31 @@
+# Set the default behavior to automatically handle line endings and normalize to LF.
+* text=auto
+
+# Enforce LF for files that need it for cross-platform compatibility.
+.gitattributes eol=lf
+.gitignore eol=lf
+*.sh eol=lf
+*.md eol=lf
+*.js eol=lf
+*.jsx eol=lf
+*.ts eol=lf
+*.tsx eol=lf
+*.json eol=lf
+*.css eol=lf
+*.html eol=lf
+
+# For Windows batch files, enforce CRLF.
+*.bat eol=crlf
+*.cmd eol=crlf
+
+# Mark common image/font formats as binary to prevent Git from touching them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
