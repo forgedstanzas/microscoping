@@ -103,6 +103,34 @@ export class NodeService {
   static getAllNodes(): TimelineNode[] {
     return Array.from(nodesMap.values());
   }
+  /**
+   * Inserts a new Period node between two existing Period nodes.
+   * The new node will have a fractional order and its tone will be the opposite
+   * of the preceding node.
+   * @param prevPeriodId - The ID of the Period node before the insertion point.
+   * @param nextPeriodId - The ID of the Period node after the insertion point.
+   * @returns The newly created TimelineNode, or undefined if insertion fails.
+   */
+  static insertPeriodBetween(prevPeriodId: string, nextPeriodId: string): TimelineNode | undefined {
+    const prevPeriod = nodesMap.get(prevPeriodId);
+    const nextPeriod = nodesMap.get(nextPeriodId);
+
+    if (!prevPeriod || !nextPeriod || prevPeriod.type !== 'period' || nextPeriod.type !== 'period') {
+      console.error('NodeService: Cannot insert period between non-existent or non-period nodes.');
+      return undefined;
+    }
+
+    const newOrder = (prevPeriod.order + nextPeriod.order) / 2;
+    const newTone = prevPeriod.tone === 'light' ? 'dark' : 'light';
+
+    return NodeService.addNode({
+      type: 'period',
+      title: 'New Period',
+      isGhost: true,
+      order: newOrder,
+      tone: newTone,
+    });
+  }
 }
 
 // --- Background Tag Synchronization ---

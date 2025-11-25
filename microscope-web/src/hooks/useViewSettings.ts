@@ -6,7 +6,7 @@ import type { ViewSettings } from '../types/settings';
 import { useModal } from '../context/ModalContext'; // Import useModal
 
 const DEFAULT_LAYOUT_CONSTANTS: Required<ViewSettings['layout']['constants']> = {
-  cardWidth: 300,
+  cardWidth: 348,
   zigzagOffset: 250,
   gapSize: 50,
 };

@@ -2,13 +2,19 @@
 
 This document tracks the implementation progress for the Microscope Web project.
 
-*Last Updated: 2025-11-24*
+*Last Updated: 2025-11-25*
 
 ---
 
 ## ✅ Completed Steps (Phase 1)
 
-All Phase 1 objectives were completed successfully, establishing a solid foundation with a real-time data layer, persistence, basic components, and a theme switcher.
+Phase 1 established the core foundation of the application, including the data layer, persistence, and basic canvas rendering.
+- **Project Scaffolding:** Initialized the project with Vite, React, and TypeScript. Set up CSS Modules for scoped styling and established a root CSS variable system for theming.
+- **Data & Persistence Layer:** Implemented the core data synchronization fabric using **Y.js** with a webrtc provider for peer-to-peer collaboration. Added the `idb-keyval` library to create a persistence layer, saving the Y.js document to **IndexedDB** for offline-first capabilities.
+- **Core Services:** Created `useYjs.ts` to manage the Y.js document and providers, and a `NodeService.ts` to provide a clean API for CRUD (Create, Read, Update, Delete) operations on timeline nodes.
+- **Initialization Logic:** Implemented logic in `App.tsx` to populate the canvas with initial "Start" and "End" bookend nodes if the document is empty, ensuring a user is never met with a blank screen.
+- **Canvas & Layout Engine v1:** Built the main `Canvas.tsx` component using `react-zoom-pan-pinch` to provide an infinite, pannable, and zoomable workspace. Created the first **JavaScript Layout Adapter (JSLA)**, `LinearAdapter.ts`, which positioned nodes based on a simple horizontal sort order.
+- **Component v1:** Developed the initial `TimelineNode.tsx` component to visually represent nodes on the canvas, including basic styles for "light", "dark", and "ghost" states.
 
 ---
 ## ✅ Completed Steps (Phase 2)
@@ -114,11 +120,19 @@ The implementation of the dynamic layout system was a significant challenge that
 
 ### Step 3: Layout Transitions
 - **Status:** Complete
-- **Details:** The CSS transition on the `.node-wrapper` class was updated to a 600ms `cubic-bezier` curve. This creates a smoother, more polished animation when the user switches between the "Linear" and "Zig-Zag" layouts.
+- **Details:** The CSS transition on the `.node-wrapper` class was updated to a 600ms `cubic-bezier` curve. This creates a a smoother, more polished animation when the user switches between the "Linear" and "Zig-Zag" layouts.
+
+---
+### Step 3.5: Add Period UI
+- **Status:** In Progress
+- **Details:** This intermediate step provides a UI for adding new timeline nodes.
+  - **Period UI Complete:** A UI for inserting **Period** nodes is now complete. This involved creating the `PeriodTrackOverlay.tsx` component to render a track line and a `+` button between existing periods.
+    - The button's positioning was refined to ensure it remains centered in the true gap between nodes, correctly accounting for configurable `layoutConstants`.
+    - A hover-flicker bug was resolved by refactoring the overlay to a single SVG layer, embedding the HTML button via a `<foreignObject>`.
+  - **Next Sub-step:** Implement UI for adding new **Event** and **Scene** nodes.
 
 ---
 ## ➡️ Current Status
 
-- **Phase 4 - Step 3 Complete:** Layout transitions have been implemented and verified.
-- **Next Step:** Proceed with **Phase 4, Step 4: Legacy Focus Mode**.
-
+- **Phase 4 - Step 3.5 In Progress:** The UI for adding new Period nodes is complete and stable.
+- **Next Step:** Implement the UI for adding new Event and Scene nodes.

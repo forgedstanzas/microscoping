@@ -125,6 +125,7 @@ export function LegacyOverlay({ nodes, layout }: LegacyOverlayProps) {
         height: '100%',
         pointerEvents: 'none',
         overflow: 'visible',
+        zIndex: 5, // Explicitly set z-index
       }}
     >
       <g>

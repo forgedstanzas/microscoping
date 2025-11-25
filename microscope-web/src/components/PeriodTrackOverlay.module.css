@@ -1,0 +1,57 @@
+/* Layer 1: The SVG container for the lines and hover targets */
+.periodTrackSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10; /* Above LegacyOverlay (5), behind nodes (20) */
+  overflow: visible;
+}
+
+.trackSegment {
+  pointer-events: all; /* This group is interactive */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.trackLine {
+  stroke: var(--period-track-color);
+  stroke-width: 12px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.hoverTarget {
+  stroke: transparent;
+  stroke-width: 30px;
+  cursor: pointer;
+}
+
+.addButton {
+  /* No position/transform needed; foreignObject handles it. */
+  width: 100%;
+  height: 100%;
+  
+  border-radius: 50%;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease-out;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.addButton:hover {
+  transform: scale(1.1);
+}
+
+.addButton:active {
+  transform: scale(0.95);
+}

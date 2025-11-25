@@ -3,6 +3,7 @@
   height: auto;
   min-height: 150px; /* Per spec */
   padding: 1rem;
+  box-sizing: border-box; /* This is the fix! */
   
   background-color: var(--node-bg, #ffffff);
   color: var(--node-text, #000000);

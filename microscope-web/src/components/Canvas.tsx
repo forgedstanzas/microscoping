@@ -4,6 +4,7 @@ import { useNodes } from '../hooks/useNodes';
 import { calculateLayout as linearCalculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
 import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter'; // Import ZigZag
 import { LegacyOverlay } from './LegacyOverlay';
+import { PeriodTrackOverlay } from './PeriodTrackOverlay'; // Import PeriodTrackOverlay
 import './Canvas.css';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ViewSettings } from '../types/settings';
@@ -143,8 +144,9 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
         >
           {/* Background div to capture clicks for blurring active elements */}
           <div className="canvas-background" onMouseDown={handleCanvasClick} />
-
+          
           <LegacyOverlay nodes={nodes} layout={layout} />
+          <PeriodTrackOverlay nodes={nodes} layout={layout} layoutConstants={layoutConstants} />
 
           {nodes.map(node => {
             const nodeLayout = layout.get(node.id);

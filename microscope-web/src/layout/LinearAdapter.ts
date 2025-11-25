@@ -101,7 +101,7 @@ export function calculateLayout(
     });
 
     // Advance currentX for the next Period column
-    currentX += CARD_WIDTH + GAP_HORIZONTAL;
+    currentX += CARD_WIDTH + GAP_HORIZONTAL + 34; // Add 34px horizontal margin
   });
 
   return layoutMap;

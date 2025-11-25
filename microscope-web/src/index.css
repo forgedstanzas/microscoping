@@ -35,6 +35,9 @@
   --modal-overlay: rgba(0, 0, 0, 0.6);
   --modal-confirm-button-bg: #213547;
   --modal-confirm-button-text: #ffffff;
+
+  /* Period Track color */
+  --period-track-color: #666;
 }
 
 [data-theme="dark"] {
@@ -64,6 +67,9 @@
   --modal-overlay: rgba(0, 0, 0, 0.6);
   --modal-confirm-button-bg: rgba(255, 255, 255, 0.1);
   --modal-confirm-button-text: var(--modal-text);
+
+  /* Period Track color */
+  --period-track-color: #bbb;
 }
 
 a {
