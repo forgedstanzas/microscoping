@@ -78,3 +78,37 @@ The implementation of the dynamic layout system was a significant challenge that
 
 - **Phase 3 Complete:** All objectives for Phase 3 are now implemented, stable, and verified.
 - **Next Step:** Proceed with **Phase 4**.
+
+---
+## 進捗状況 (Phase 4 Progress)
+
+### Step 1: Interactive Palette & Highlighting
+- **Status:** Complete
+- **Details:** The initial goal of highlighting "Yes" list words was expanded into a full-featured, collaborative palette system.
+  - **Data Layer:** A `usePalette` hook was created to manage `affirmedWords` and `bannedWords` as `Y.Array`s in the shared Y.js document.
+  - **UI:** The `SideboardPalette` component was built with side-by-side, scrollable lists for both word types, including text inputs and `+/-` buttons for management. "Enter" key submission was also added.
+  - **Highlighting:** `PaletteEnforcer.ts` and `HighlightableText.tsx` were refactored to consume both lists and apply distinct green (affirmed) and red (banned) highlights to words in node descriptions.
+  - **Bug Fixes:** A significant number of bugs were resolved to make this feature robust:
+    - Fixed a Y.js race condition by making the `usePalette` hook sync-aware.
+    - Resolved collaborative inconsistencies by lifting palette and theme state into `App.tsx` and a new `ThemeContext`, creating a single source of truth.
+    - Corrected a data-type issue in `SessionManager.ts` to ensure palette lists are properly saved and restored during import/export.
+
+### Step 2: View Settings Loader & UI Polish
+- **Status:** Complete
+- **Details:** Implemented a system for users to customize the application's appearance and layout by uploading a JSON file. This step also included major UI bug fixes and architectural improvements.
+  - **Core Logic:** A `useViewSettings` hook was created to manage all custom settings state, including theme colors and layout constants. Layout adapters were refactored to accept these dynamic constants.
+  - **UI & Features:**
+    - "Upload View", "Reset View", and "Share View" buttons were added to the settings panel.
+    - The "Share View" feature was implemented using a race-condition-proof event log in the Y.js document, ensuring reliable, one-time sharing between clients.
+    - A global, custom Modal Dialog system (`ModalContext` and `<Modal/>`) was built to replace all native browser prompts (`alert`, `confirm`), improving UX and resolving issues with background tabs.
+  - **CSS & Layout Fixes:**
+    - Fixed a "color bleed" issue by implementing a chained CSS variable system (`--ui-bg`).
+    - Resolved long-standing layout bugs by removing incorrect default styles, pinning the `Sideboard` to the viewport, and implementing a robust, measurement-based "Peel-Off" logic for the sideboard tabs.
+    - Added a "Re-center" button to the canvas as a user-friendly alternative to scrollbars.
+
+---
+## ➡️ Current Status
+
+- **Phase 4 - Steps 1 & 2 Complete:** The interactive palette and dynamic view settings features are fully implemented, stable, and verified.
+- **Next Step:** Proceed with **Phase 4, Step 3: Layout Transitions**.
+

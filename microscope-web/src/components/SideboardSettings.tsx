@@ -1,22 +1,22 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { SessionManager } from '../services/SessionManager';
 import { ViewSettingsService } from '../services/ViewSettingsService';
 import ThemeSwitcher from './ThemeSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import styles from './SideboardSettings.module.css';
-import type { ViewSettings } from '../types/settings'; // Import the type
+import type { ViewSettings } from '../types/settings';
+import { useViewSettings } from '../hooks/useViewSettings';
+import { useModal } from '../context/ModalContext'; // Import useModal
 
 interface SideboardSettingsProps {
   layoutMode: 'zigzag' | 'linear';
   onLayoutChange: (newMode: 'zigzag' | 'linear') => void;
-  updateLayoutConstants: (newConstants: Partial<ViewSettings['layout']['constants']>) => void; // New prop
+  viewSettings: ReturnType<typeof useViewSettings>;
 }
 
-export function SideboardSettings({ layoutMode, onLayoutChange, updateLayoutConstants }: SideboardSettingsProps) {
-  // Register the layout constants setter with the service on mount
-  useEffect(() => {
-    ViewSettingsService.registerLayoutConstantsSetter(updateLayoutConstants);
-  }, [updateLayoutConstants]); // Re-register if setter changes (should be stable)
+export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: SideboardSettingsProps) {
+  const { applySettings, resetSettings, shareSettings } = viewSettings;
+  const { showAlert, showConfirm } = useModal(); // Use the modal hook
 
   const handleExportClick = () => {
     SessionManager.exportSession();
@@ -29,7 +29,23 @@ export function SideboardSettings({ layoutMode, onLayoutChange, updateLayoutCons
     input.onchange = (event: Event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
-        SessionManager.importSession(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const sessionData = JSON.parse(e.target?.result as string);
+            // Use the custom modal for confirmation
+            showConfirm(
+              'This will overwrite the current session with the contents of the selected file. Are you sure?',
+              () => {
+                SessionManager.applySession(sessionData);
+              }
+            );
+          } catch (error) {
+            console.error('Failed to parse session file:', error);
+            showAlert('Failed to read or parse session file. Please ensure it is a valid JSON.');
+          }
+        };
+        reader.readAsText(file);
       }
     };
     input.click();
@@ -38,23 +54,23 @@ export function SideboardSettings({ layoutMode, onLayoutChange, updateLayoutCons
   const handleUploadSettingsClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json'; // Accept JSON files
+    input.accept = '.json';
     input.onchange = (event: Event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
-            const parsedSettings: ViewSettings = JSON.parse(e.target?.result as string);
+            const parsedSettings = JSON.parse(e.target?.result as string);
             if (ViewSettingsService.isValidViewSettings(parsedSettings)) {
-              ViewSettingsService.applySettings(parsedSettings);
-              alert('View settings applied successfully!');
+              applySettings(parsedSettings);
+              // Success is silent
             } else {
-              alert('Invalid View Settings file. Please ensure it follows the correct schema.');
+              showAlert('Invalid View Settings file. Please ensure it has a "theme" or "layout" property.');
             }
           } catch (error) {
             console.error('Failed to parse view settings file:', error);
-            alert('Failed to read or parse view settings file. Please ensure it is a valid JSON.');
+            showAlert('Failed to read or parse view settings file. Please ensure it is a valid JSON.');
           }
         };
         reader.readAsText(file);
@@ -88,7 +104,13 @@ export function SideboardSettings({ layoutMode, onLayoutChange, updateLayoutCons
       <h3>View Configuration</h3>
       <div className={styles.buttonGroup}>
         <button onClick={handleUploadSettingsClick} className={styles.button}>
-          Upload View Settings
+          Upload View
+        </button>
+        <button onClick={shareSettings} className={styles.button}>
+          Share View
+        </button>
+        <button onClick={resetSettings} className={styles.button}>
+          Reset View
         </button>
       </div>
     </div>

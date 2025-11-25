@@ -53,76 +53,48 @@ export class SessionManager {
   }
 
   /**
-   * Imports a session from a user-selected file, overwriting the current
-   * state after receiving user confirmation.
-   * @param file - The .microscope file to import.
+   * Applies a session data object to the Y.js document, overwriting all
+   * existing data. This function should be called after user confirmation.
+   * @param sessionData - The parsed session data to apply.
    */
-  static importSession(file: File) {
-    if (!file) {
-      console.error('SessionManager: No file provided for import.');
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      try {
-        const json = event.target?.result as string;
-        const sessionData: SessionData = JSON.parse(json);
-
-        // Basic validation to ensure the file has the expected structure.
-        if (!sessionData.nodes || !sessionData.meta || !sessionData.palette) {
-          throw new Error('Invalid session file format.');
-        }
-
-        // CRITICAL: Get user confirmation before overwriting data.
-        const isConfirmed = window.confirm(
-          'This will overwrite the current session with the contents of the selected file. Are you sure?'
-        );
-
-        if (isConfirmed) {
-          // Use a single transaction to perform all mutations atomically.
-          ydoc.transact(() => {
-            // Nuke: Clear all existing data from the maps.
-            metaMap.clear();
-            nodesMap.clear();
-            paletteMap.clear();
-
-            // Rehydrate Meta and Nodes
-            Object.entries(sessionData.meta).forEach(([key, value]) => {
-              metaMap.set(key, value);
-            });
-            Object.entries(sessionData.nodes).forEach(([key, value]) => {
-              nodesMap.set(key, value);
-            });
-
-            // Rehydrate Palette correctly by converting plain arrays back to Y.Arrays
-            Object.entries(sessionData.palette).forEach(([key, value]) => {
-              if (Array.isArray(value)) {
-                const yArray = new Y.Array<string>();
-                yArray.push(...value); // Spread the items into the new Y.Array
-                paletteMap.set(key, yArray); // Set the Y.Array, not the plain array
-              }
-            });
-          });
-          console.log('SessionManager: Session imported successfully.');
-          // Force a reload to ensure all components re-render with the new state.
-          // This is a simple way to reset all component states.
-          window.location.reload();
-        } else {
-          console.log('SessionManager: Import cancelled by user.');
-        }
-      } catch (error) {
-        console.error('SessionManager: Failed to parse or import session file.', error);
-        alert('Failed to import session file. It may be corrupt or in the wrong format.');
+  static applySession(sessionData: SessionData) {
+    try {
+      if (!sessionData.nodes || !sessionData.meta || !sessionData.palette) {
+        throw new Error('Invalid session data format.');
       }
-    };
 
-    reader.onerror = () => {
-      console.error('SessionManager: Error reading file.');
-      alert('An error occurred while reading the file.');
-    };
+      // Use a single transaction to perform all mutations atomically.
+      ydoc.transact(() => {
+        // Nuke: Clear all existing data from the maps.
+        metaMap.clear();
+        nodesMap.clear();
+        paletteMap.clear();
 
-    reader.readAsText(file);
+        // Rehydrate Meta and Nodes
+        Object.entries(sessionData.meta).forEach(([key, value]) => {
+          metaMap.set(key, value);
+        });
+        Object.entries(sessionData.nodes).forEach(([key, value]) => {
+          nodesMap.set(key, value);
+        });
+
+        // Rehydrate Palette correctly by converting plain arrays back to Y.Arrays
+        Object.entries(sessionData.palette).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            const yArray = new Y.Array<string>();
+            yArray.push(...value); // Spread the items into the new Y.Array
+            paletteMap.set(key, yArray); // Set the Y.Array, not the plain array
+          }
+        });
+      });
+
+      console.log('SessionManager: Session applied successfully.');
+      // Force a reload to ensure all components re-render with the new state.
+      window.location.reload();
+    } catch (error) {
+      console.error('SessionManager: Failed to apply session data.', error);
+      // The error alert will be handled by the UI component that calls this.
+      throw error; // Re-throw the error so the caller can handle it.
+    }
   }
 }

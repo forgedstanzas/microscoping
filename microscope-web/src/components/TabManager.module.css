@@ -37,10 +37,8 @@
 }
 
 .tabContent {
+  display: flex; /* Make this a flex container */
   flex-grow: 1; /* Take remaining vertical space */
-  overflow-y: auto; /* Scroll if content overflows */
-  padding: 10px;
-  background-color: var(--node-bg); /* Theme-aware background */
+  /* Overflow and other styles are now handled by the content itself */
   border-radius: 8px;
-  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
 }

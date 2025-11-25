@@ -1,0 +1,62 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modalBox {
+  background: var(--modal-bg);
+  color: var(--modal-text);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 450px;
+  text-align: center;
+  border: 1px solid var(--modal-border);
+}
+
+.modalBox p {
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.button {
+  flex-grow: 1;
+  padding: 0.75em 1.5em;
+  border-radius: 6px;
+  border: 1px solid var(--modal-border);
+  background-color: transparent;
+  color: var(--modal-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.confirmButton {
+  background-color: var(--modal-confirm-button-bg);
+  color: var(--modal-confirm-button-text);
+}
+
+.button:hover {
+  background-color: var(--button-hover-bg);
+}
+
+.confirmButton:hover {
+  opacity: 0.8;
+}

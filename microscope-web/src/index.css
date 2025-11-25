@@ -16,9 +16,25 @@
   --node-bg: #ffffff;
   --node-text: #000000;
   --canvas-bg: #ebebeb;
+  --border-color: rgba(0, 0, 0, 0.2);
   --tone-light: #eee; /* Very light gray, visually lighter */
   --tone-dark: #333333; /* Dark gray */
   --ghost-border: rgba(0, 0, 0, 0.4);
+
+  /* New UI component variables (Light) */
+  --ui-bg: #f0f0f0;
+  --button-bg: var(--ui-bg);
+  --input-bg: var(--ui-bg);
+  --list-bg: var(--ui-bg);
+  --button-hover-bg: #e0e0e0;
+
+  /* Modal-specific variables (Light) - Not chained */
+  --modal-bg: #ffffff;
+  --modal-text: #213547;
+  --modal-border: rgba(0, 0, 0, 0.2);
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --modal-confirm-button-bg: #213547;
+  --modal-confirm-button-text: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -29,9 +45,25 @@
   --node-bg: #1a1a1a;
   --node-text: rgba(255, 255, 255, 0.87);
   --canvas-bg: #242424;
+  --border-color: rgba(255, 255, 255, 0.2);
   --tone-light: #eee; /* Very light gray */
   --tone-dark: #888; /* Medium gray */
   --ghost-border: rgba(255, 255, 255, 0.4);
+  
+  /* New UI component variables (Dark) */
+  --ui-bg: #333;
+  --button-bg: var(--ui-bg);
+  --input-bg: var(--ui-bg);
+  --list-bg: var(--ui-bg);
+  --button-hover-bg: #444;
+
+  /* Modal-specific variables (Dark) - Not chained */
+  --modal-bg: #2a2a2a;
+  --modal-text: rgba(255, 255, 255, 0.87);
+  --modal-border: rgba(255, 255, 255, 0.2);
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --modal-confirm-button-bg: rgba(255, 255, 255, 0.1);
+  --modal-confirm-button-text: var(--modal-text);
 }
 
 a {
@@ -48,10 +80,9 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden; /* Prevent page-level scrollbars */
 }
 
 h1 {
@@ -66,7 +97,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #f9f9f9;
+  background-color: var(--button-bg);
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -79,5 +110,6 @@ button:focus-visible {
 }
 
 [data-theme="dark"] button {
-  background-color: #1a1a1a;
+  /* This could be removed if the default --button-bg is sufficient, but kept for potential specific overrides */
+  background-color: var(--button-bg);
 }

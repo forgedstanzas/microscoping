@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "shared-settings-log": []
+  },
+  "nodes": {
+    "d4cbef61-24af-4396-9a6c-344724357795": {
+      "parentId": null,
+      "description": "Node Editing & Auto-Layout:\n       * Click on the title or description of any node (e.g., \"Start Period\"). The text should become editable. Alins aliens\n       * Add several lines of text to the description and then click outside the node. magic ExportTestAffirm\n       * Expected Result: The node's height should automatically expand to fit the new content, and any nodes below it should move down to make space. magic @Character-A @Plot2 Zombis",
+      "tone": "light",
+      "isGhost": false,
+      "isBookend": true,
+      "order": 0,
+      "type": "period",
+      "title": "Start Era",
+      "id": "d4cbef61-24af-4396-9a6c-344724357795",
+      "tags": [
+        "@Character-A",
+        "@Plot2"
+      ]
+    },
+    "16215e6a-226e-4f7b-bd72-446229ad36e7": {
+      "parentId": null,
+      "description": "No description. @Character-A @Plot2 \nThis story is about alens and robots. And zomies. ExportTestBan\n\nThis story is about aliens and robots. ",
+      "tone": "dark",
+      "isGhost": false,
+      "isBookend": true,
+      "order": 1,
+      "type": "period",
+      "title": "End Period",
+      "id": "16215e6a-226e-4f7b-bd72-446229ad36e7",
+      "tags": [
+        "@Character-A",
+        "@Plot2"
+      ]
+    }
+  },
+  "palette": {
+    "affirmedWords": [
+      "magic",
+      "robot"
+    ],
+    "bannedWords": [
+      "alien",
+      "zombie"
+    ]
+  }
+}

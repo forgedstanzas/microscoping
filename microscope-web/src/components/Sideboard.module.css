@@ -1,14 +1,34 @@
 .sideboard {
-  position: absolute;
+  position: fixed;
   top: 0;
   right: 0;
   width: 300px; /* Fixed width */
   height: 100vh; /* Full viewport height */
-  background-color: var(--node-bg); /* Theme-aware background */
+  background-color: var(--ui-bg); /* Theme-aware background */
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
   display: flex; /* Use flex to make TabManager take full height */
   flex-direction: column;
   padding: 10px;
   box-sizing: border-box; /* Include padding in width/height */
   z-index: 100; /* Ensure it's above the canvas */
+}
+
+/* This container holds the rendered content of the main tab */
+.mainContentContainer {
+  height: 100%;
+  overflow-y: auto; /* Allow scrolling for the edge case where the last item still overflows */
+  padding: 10px;
+  background-color: var(--ui-bg);
+  border-radius: 8px;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* This container is used only for measurement and is never visible */
+.measurementBox {
+  position: absolute;
+  visibility: hidden;
+  z-index: -1;
+  pointer-events: none;
+  /* Match the width to ensure text wrapping is the same as the real component */
+  width: 280px; /* 300px width - 2*10px padding */
 }

@@ -4,16 +4,16 @@ import { NodeService } from './services/NodeService';
 import { Canvas } from './components/Canvas';
 import { Sideboard } from './components/Sideboard';
 import { usePalette } from './hooks/usePalette';
-import { useLayoutConstants } from './hooks/useLayoutConstants'; // Import useLayoutConstants
+import { useViewSettings } from './hooks/useViewSettings';
+import { Modal } from './components/Modal'; // Import Modal
 import './App.css';
 
 function App() {
   // Initialize Y.js and get sync status
   const { ydoc, isSynced } = useYjs();
-  // Call the palette hook once, here in the common ancestor
+  // Call hooks for shared state once, here in the common ancestor
   const paletteState = usePalette();
-  // Call the layout constants hook once, here in the common ancestor
-  const { layoutConstants, updateLayoutConstants } = useLayoutConstants();
+  const viewSettings = useViewSettings();
 
   // State for layout mode, lifted to App
   const [layoutMode, setLayoutMode] = useState<'zigzag' | 'linear'>('zigzag');
@@ -48,14 +48,15 @@ function App() {
         setLayoutMode={setLayoutMode}
         affirmedWords={paletteState.affirmedWords}
         bannedWords={paletteState.bannedWords}
-        layoutConstants={layoutConstants} // Pass layout constants
+        layoutConstants={viewSettings.layoutConstants} // Pass layout constants
       />
       <Sideboard
         layoutMode={layoutMode}
         setLayoutMode={setLayoutMode}
         palette={paletteState}
-        updateLayoutConstants={updateLayoutConstants} // Pass layout setter
+        viewSettings={viewSettings} // Pass all view settings and functions
       />
+      <Modal />
     </>
   );
 }

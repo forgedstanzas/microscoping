@@ -1,98 +1,161 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TabManager } from './TabManager';
 import { SideboardMeta } from './SideboardMeta';
 import { SideboardPalette } from './SideboardPalette';
 import { SideboardLegacies } from './SideboardLegacies';
 import { SideboardSettings } from './SideboardSettings';
 import styles from './Sideboard.module.css';
-import { usePalette } from '../hooks/usePalette'; // For type definition
-import { useLayoutConstants } from '../hooks/useLayoutConstants'; // For type definition
-
-// Approximate heights for content sections (used in peel-off logic)
-const APPROX_HEIGHTS = {
-  meta: 200,
-  palette: 300,
-  legacies: 300,
-  settings: 200, // Even though settings is always pinned, good to have its height
-};
+import { usePalette } from '../hooks/usePalette';
+import { useViewSettings } from '../hooks/useViewSettings';
 
 interface SideboardProps {
   layoutMode: 'zigzag' | 'linear';
   setLayoutMode: React.Dispatch<React.SetStateAction<'zigzag' | 'linear'>>;
   palette: ReturnType<typeof usePalette>;
-  updateLayoutConstants: ReturnType<typeof useLayoutConstants>['updateLayoutConstants']; // New prop
+  viewSettings: ReturnType<typeof useViewSettings>;
 }
 
-export function Sideboard({ layoutMode, setLayoutMode, palette, updateLayoutConstants }: SideboardProps) {
+// Define the sections in their priority order (highest to lowest)
+const SECTIONS_IN_PRIORITY = ['meta', 'palette', 'legacies'];
+
+export function Sideboard({ layoutMode, setLayoutMode, palette, viewSettings }: SideboardProps) {
   const sideboardRef = useRef<HTMLDivElement>(null);
   const [sideboardHeight, setSideboardHeight] = useState(0);
-  const [tabs, setTabs] = useState<any[]>([]); // Array of tabs for TabManager
+  const [sectionHeights, setSectionHeights] = useState<Record<string, number> | null>(null);
 
-  // Observe the height of the sideboard container
+  // --- Measurement Phase ---
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
+    meta: useRef<HTMLDivElement>(null),
+    palette: useRef<HTMLDivElement>(null),
+    legacies: useRef<HTMLDivElement>(null),
+  };
+
   useEffect(() => {
-    const observer = new ResizeObserver(entries => {
+    const sbObserver = new ResizeObserver(entries => {
       const { height } = entries[0].contentRect;
       setSideboardHeight(height);
     });
 
-    if (sideboardRef.current) {
-      observer.observe(sideboardRef.current);
+    const currentSbRef = sideboardRef.current;
+    if (currentSbRef) {
+      sbObserver.observe(currentSbRef);
     }
 
     return () => {
-      if (sideboardRef.current) {
-        observer.unobserve(sideboardRef.current);
+      if (currentSbRef) {
+        sbObserver.unobserve(currentSbRef);
       }
     };
   }, []);
 
-  // Implement the "Peel-Off" logic based on available height
+  // Effect to measure the initial height of all sections.
   useEffect(() => {
-    const currentTabs: any[] = [];
-    let mainTabContent: string[] = [];
-
-    // Prioritize Meta, then Palette, then Legacies
-    if (sideboardHeight > (APPROX_HEIGHTS.meta + APPROX_HEIGHTS.palette + APPROX_HEIGHTS.legacies)) {
-      // All fit in main tab
-      mainTabContent = ['meta', 'palette', 'legacies'];
-    } else if (sideboardHeight > (APPROX_HEIGHTS.meta + APPROX_HEIGHTS.palette)) {
-      // Meta and Palette fit, Legacies peel off
-      mainTabContent = ['meta', 'palette'];
-      currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies /> });
-    } else {
-      // Only Meta fits, Palette and Legacies peel off
-      mainTabContent = ['meta'];
-      currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} /> });
-      currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies /> });
-    }
-
-    // Add main tab if it has content
-    if (mainTabContent.length > 0) {
-      // Map content strings to actual components
-      const mainContentComponents = mainTabContent.map(item => {
-        switch (item) {
-          case 'meta': return <SideboardMeta key="meta" />;
-          case 'palette': return <SideboardPalette key="palette" palette={palette} />;
-          case 'legacies': return <SideboardLegacies key="legacies" />;
-          default: return null;
+    // Only measure if we haven't already.
+    if (!sectionHeights) {
+      const measuredHeights: Record<string, number> = {};
+      let allMeasured = true;
+      for (const id of SECTIONS_IN_PRIORITY) {
+        const ref = sectionRefs[id];
+        if (ref.current) {
+          // Add a small margin to account for spacing between elements
+          measuredHeights[id] = ref.current.offsetHeight + 10; 
+        } else {
+          allMeasured = false;
+          break;
         }
-      });
-      currentTabs.unshift({ id: 'main', title: 'Main', content: <div>{mainContentComponents}</div>, defaultActive: true });
+      }
+      if (allMeasured) {
+        setSectionHeights(measuredHeights);
+      }
+    }
+  }, [sectionHeights, sectionRefs.meta, sectionRefs.palette, sectionRefs.legacies]);
+
+
+  // --- Calculation & Render Phase ---
+  const tabs = useMemo(() => {
+    const availableHeight = sideboardHeight 
+      - 50 // Approx height for tab headers
+      - 50; // Approx height for settings tab button + padding
+
+    const mainTabItems: string[] = [];
+    const peeledOffItems: string[] = [];
+
+    // Only perform calculation if we have all the measurements
+    if (sectionHeights && sideboardHeight > 0) {
+      let cumulativeHeight = 0;
+      // Always keep the first, highest-priority item in the main tab
+      mainTabItems.push(SECTIONS_IN_PRIORITY[0]);
+      cumulativeHeight += sectionHeights[SECTIONS_IN_PRIORITY[0]] || 0;
+
+      // Iterate through the rest of the items to see if they fit
+      for (let i = 1; i < SECTIONS_IN_PRIORITY.length; i++) {
+        const id = SECTIONS_IN_PRIORITY[i];
+        cumulativeHeight += sectionHeights[id] || 0;
+        if (cumulativeHeight < availableHeight) {
+          mainTabItems.push(id);
+        } else {
+          peeledOffItems.push(id);
+        }
+      }
+    } else {
+      // Before measurements are ready, just put everything in the main tab
+      mainTabItems.push(...SECTIONS_IN_PRIORITY);
     }
 
-    // Always append Settings tab at the end
+    const currentTabs: any[] = [];
+    
+    // --- Render Logic ---
+    const mainContentComponents = mainTabItems.map(id => {
+      switch (id) {
+        case 'meta': return <SideboardMeta key="meta" />;
+        case 'palette': return <SideboardPalette key="palette" palette={palette} />;
+        case 'legacies': return <SideboardLegacies key="legacies" />;
+        default: return null;
+      }
+    });
+
+    if (mainTabItems.length > 0) {
+      currentTabs.push({
+        id: 'main',
+        title: 'Main',
+        content: <div>{mainContentComponents}</div>,
+        defaultActive: true,
+      });
+    }
+
+    peeledOffItems.forEach(id => {
+       switch (id) {
+        case 'palette': 
+          currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} /> });
+          break;
+        case 'legacies':
+          currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies /> });
+          break;
+      }
+    });
+    
     currentTabs.push({ 
       id: 'settings', 
       title: 'Settings', 
-      content: <SideboardSettings layoutMode={layoutMode} onLayoutChange={setLayoutMode} updateLayoutConstants={updateLayoutConstants} /> 
+      content: <SideboardSettings layoutMode={layoutMode} onLayoutChange={setLayoutMode} viewSettings={viewSettings} /> 
     });
-    
-    setTabs(currentTabs);
-  }, [sideboardHeight, layoutMode, setLayoutMode, palette, updateLayoutConstants]); // Add updateLayoutConstants to dependencies
+
+    return currentTabs;
+  }, [sideboardHeight, sectionHeights, layoutMode, setLayoutMode, palette, viewSettings]);
+
+  // A hidden container used only for measuring the initial size of components
+  const measurementBox = (
+    <div className={styles.measurementBox}>
+      <div ref={sectionRefs.meta}><SideboardMeta /></div>
+      <div ref={sectionRefs.palette}><SideboardPalette palette={palette} /></div>
+      <div ref={sectionRefs.legacies}><SideboardLegacies /></div>
+    </div>
+  );
 
   return (
     <div ref={sideboardRef} className={styles.sideboard}>
-      <TabManager tabs={tabs} />
+      {!sectionHeights && measurementBox}
+      {sectionHeights && <TabManager tabs={tabs} />}
     </div>
   );
 }

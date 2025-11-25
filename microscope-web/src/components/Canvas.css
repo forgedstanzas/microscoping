@@ -4,6 +4,27 @@
   overflow: hidden;
   background-color: var(--canvas-bg, #f0f0f0);
   cursor: grab;
+  position: relative; /* Needed for absolute positioning of children */
+}
+
+.recenter-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100; /* Below sideboard (100) but above canvas content */
+  padding: 0.5rem 1rem;
+  background-color: var(--ui-bg);
+  color: var(--node-text);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.recenter-button:hover {
+  opacity: 1;
 }
 
 .canvas-container:active {
@@ -26,5 +47,3 @@
   width: 300px; /* Set explicit width on the element being measured */
   transition: transform 0.3s ease-out;
 }
-
-

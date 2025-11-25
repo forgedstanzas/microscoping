@@ -1,5 +1,5 @@
 import { TimelineNodeComponent } from './TimelineNode';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { useNodes } from '../hooks/useNodes';
 import { calculateLayout as linearCalculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
 import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter'; // Import ZigZag
@@ -18,6 +18,7 @@ interface CanvasProps {
 
 export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
   const nodes = useNodes();
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [layout, setLayout] = useState<LayoutMap>(new Map());
   const [dimensions, setDimensions] = useState<DimensionMap>(new Map());
   const [initialY, setInitialY] = useState(window.innerHeight / 2); // Center Y for ZigZag
@@ -93,9 +94,40 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
     }
   };
 
+  const handleRecenter = () => {
+    if (!transformRef.current || layout.size === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    for (const node of layout.values()) {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      maxX = Math.max(maxX, node.x + node.width);
+      maxY = Math.max(maxY, node.y + node.height);
+    }
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const contentCenterX = minX + contentWidth / 2;
+    const contentCenterY = minY + contentHeight / 2;
+
+    const { setTransform } = transformRef.current;
+    
+    // Animate the pan and zoom
+    setTransform(
+      -contentCenterX + window.innerWidth / 2,
+      -contentCenterY + window.innerHeight / 2,
+      1, // Reset zoom to 1
+      600, // Animation time
+      'easeOut' // Animation type
+    );
+  };
+
   return (
     <div className="canvas-container">
+      <button className="recenter-button" onClick={handleRecenter}>Re-center</button>
       <TransformWrapper
+        ref={transformRef}
         minScale={0.1}
         maxScale={3}
         initialScale={0.8}
