@@ -1,0 +1,47 @@
+.settingsGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem 1rem; /* 0.75rem row-gap, 1rem column-gap */
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.settingsGrid > label {
+  justify-self: left;
+}
+
+.settingsGrid > select {
+  width: 100%;
+}
+.divider {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 1.5rem 0;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.button {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: var(--button-hover-bg);
+}
+
+.hidden-input {
+  display: none;
+}

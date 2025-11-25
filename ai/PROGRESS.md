@@ -35,7 +35,46 @@ The implementation of the dynamic layout system was a significant challenge that
   3.  **Focus Loss:** The "re-render on type" issue was solved by wrapping the `TimelineNodeComponent` in `React.memo`. This prevents it from re-rendering (and losing focus) when its parent `Canvas` component re-renders during a layout update.
 
 ---
+## 進捗状況 (Phase 3 Progress)
+
+### Step 1: Palette Logic (Fuzzy Search & Highlighting)
+- **Status:** Complete
+- **Details:**
+  - `fuse.js` library installed for fuzzy searching.
+  - `PaletteEnforcer.ts` module created to find fuzzy matches for "banned ingredients" within node descriptions.
+  - `HighlightableText.tsx` component created and integrated into `TimelineNode.tsx` to provide visual feedback for banned words.
+  - **Bugs Resolved:**
+    -   The "second occurrence" bug in `PaletteEnforcer.ts` was fixed, ensuring all instances of a banned word are highlighted.
+    -   The visual conflict with the browser's native spellchecker was resolved by changing the highlight style from a wavy underline to a subtle box effect.
+    -   A critical multi-client synchronization bug in `useNodes.ts` was fixed, ensuring new clients (tabs/windows) correctly load and display the full application state.
+    -   The "typing-revert" bug in `HighlightableText.tsx` was fixed by ensuring the `contentEditable` div's content is not overwritten while the user is actively typing, preventing loss of input and maintaining focus.
+
+### Step 2: The Zig-Zag JSLA (Layout Engine)
+- **Status:** Complete
+- **Details:**
+  - `ZigZagAdapter.ts` created, implementing the "Tone-Divergent" layout logic.
+  - Integrated into `Canvas.tsx`, dynamically centering the canvas based on window height.
+  - Nodes with `light` tone are positioned above the canvas's horizontal center and stack upwards. Nodes with `dark` tone are positioned below the center and stack downwards.
+  - Styling for tone borders (`--tone-light`, `--tone-dark`) was refined across light and dark themes to ensure the "light" tone border is always visually lighter than the "dark" tone border.
+
+### Step 3: The Dynamic Sideboard
+- **Status:** Complete
+- **Details:**
+  - `Sideboard.tsx`, `TabManager.tsx`, and placeholder content components (`SideboardMeta.tsx`, `SideboardPalette.tsx`, `SideboardLegacies.tsx`, `SideboardSettings.tsx`) were created.
+  - Implemented the "Peel-Off" logic in `Sideboard.tsx` for responsive tab management based on available vertical screen space.
+  - The `ThemeSwitcher` component was relocated into `SideboardSettings.tsx` and its absolute positioning CSS was removed, allowing it to render correctly within the settings panel.
+  - A new `LayoutSwitcher.tsx` component (for switching between Linear and Zig-Zag layouts) was created and integrated into `SideboardSettings.tsx`. Its styling was adjusted to use standard browser dropdown appearance for consistency.
+
+### Step 4: Import/Export (Persistence)
+- **Status:** Complete
+- **Details:**
+  - `SessionManager.ts` service was created to handle saving and loading the session.
+  - `exportSession()` serializes the main Y.js maps (`meta`, `nodes`, `palette`) to a JSON file and triggers a download.
+  - `importSession()` reads a JSON file, prompts the user for confirmation, and then atomically overwrites the current session state.
+  - UI buttons were added to `SideboardSettings.tsx` to trigger the import and export functions.
+
+---
 ## ➡️ Current Status
 
-- **Phase 2 Complete:** All planned features for Phase 2 are implemented, stable, and verified.
-- **Next Step:** Ready for **Phase 3 planning** and implementation.
+- **Phase 3 Complete:** All objectives for Phase 3 are now implemented, stable, and verified.
+- **Next Step:** Proceed with **Phase 4**.

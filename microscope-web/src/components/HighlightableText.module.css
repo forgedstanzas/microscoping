@@ -1,0 +1,52 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.textarea,
+.highlighter {
+  /* Ensure both layers have identical sizing, font, and padding */
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0.25rem;
+  margin: 0;
+  border: 0;
+  outline: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-y: hidden; /* Prevent scrollbars on highlight layer */
+  
+  color: inherit; /* Inherit text color from parent node */
+  min-height: 1.5em; /* Minimum height for a line */
+}
+
+.textarea {
+  position: relative; /* Needs to be on top */
+  z-index: 2;
+  background-color: transparent;
+}
+
+.highlighter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  color: transparent; /* Make the actual text transparent, only highlights are visible */
+}
+
+.highlightBanned {
+  /* Style for banned words - box effect */
+  background-color: rgba(255, 0, 0, 0.15); /* Light red background */
+  outline: 1px solid rgba(255, 0, 0, 0.6); /* Thin red border/outline */
+  border-radius: 2px; /* Slightly rounded corners */
+}
+
+.highlightAffirmed {
+  /* Style for affirmed words - green box effect */
+  background-color: rgba(0, 255, 0, 0.1); /* Light green background */
+  outline: 1px solid rgba(0, 255, 0, 0.5); /* Thin green border/outline */
+  border-radius: 2px; /* Slightly rounded corners */
+}

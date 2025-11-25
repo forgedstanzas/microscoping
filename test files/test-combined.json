@@ -1,0 +1,15 @@
+{
+    "layout": {
+        "constants": {
+            "cardWidth": 200,
+            "gapSize": 20,
+            "zigzagOffset": 100
+        }
+    },
+    "theme": {
+        "--node-bg": "red",
+        "--node-text": "white",
+        "--node-border-light": "darkred",
+        "--node-border-dark": "darkred"
+    }
+}

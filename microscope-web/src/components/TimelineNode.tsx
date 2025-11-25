@@ -2,15 +2,18 @@ import { NodeService } from '../services/NodeService';
 import type { TimelineNode } from '../types/timeline';
 import styles from './TimelineNode.module.css';
 import clsx from 'clsx';
-import { useRef, memo } from 'react';
+import { useRef, memo, useCallback, useMemo } from 'react';
+import { HighlightableText } from './HighlightableText';
+import { debounce } from '../utils/debounce';
 
 interface TimelineNodeProps {
   node: TimelineNode;
+  affirmedWords: string[];
+  bannedWords: string[];
 }
 
-function TimelineNodeComponentInternal({ node }: TimelineNodeProps) {
+function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: TimelineNodeProps) {
   const titleRef = useRef<HTMLDivElement>(null);
-  const descriptionRef = useRef<HTMLDivElement>(null);
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';
@@ -21,14 +24,30 @@ function TimelineNodeComponentInternal({ node }: TimelineNodeProps) {
     NodeService.updateNode(node.id, { isGhost: !node.isGhost });
   };
 
-  const handleContentBlur = (field: 'title' | 'description') => {
-    const ref = field === 'title' ? titleRef : descriptionRef;
-    const newText = ref.current?.innerText;
-
-    // Only update if the text has actually changed
-    if (newText !== undefined && newText !== node[field]) {
-      NodeService.updateNode(node.id, { [field]: newText });
+  const handleTitleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    const newText = e.currentTarget.innerText;
+    if (newText !== undefined && newText !== node.title) {
+      NodeService.updateNode(node.id, { title: newText });
     }
+  };
+
+  // Debounce the description update to avoid excessive re-renders while typing.
+  // useMemo is used to ensure the debounced function is not re-created on every render.
+  const updateDescription = useMemo(
+    () =>
+      debounce((newDescription: string) => {
+        if (newDescription !== node.description) {
+          NodeService.updateNode(node.id, { description: newDescription });
+        }
+      }, 300),
+    [node.id, node.description]
+  );
+  
+  // The blur event for the description should also trigger an update.
+  const handleDescriptionBlur = (currentValue: string) => {
+     if (currentValue !== node.description) {
+        NodeService.updateNode(node.id, { description: currentValue });
+     }
   };
 
   return (
@@ -53,20 +72,17 @@ function TimelineNodeComponentInternal({ node }: TimelineNodeProps) {
         className={styles.title}
         contentEditable
         suppressContentEditableWarning
-        onBlur={() => handleContentBlur('title')}
-      >
-        {node.title}
-      </div>
-      <div
-        ref={descriptionRef}
-        className={styles.description}
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={() => handleContentBlur('description')}
-        // Use dangerouslySetInnerHTML to handle newlines from Y.js correctly
-        dangerouslySetInnerHTML={{ __html: node.description || 'No description.' }}
-      >
-      </div>
+        onBlur={handleTitleBlur}
+        dangerouslySetInnerHTML={{ __html: node.title }}
+      />
+      
+      <HighlightableText
+        value={node.description}
+        onChange={updateDescription}
+        onBlur={handleDescriptionBlur}
+        affirmedWords={affirmedWords}
+        bannedWords={bannedWords}
+      />
       
       {/* Interaction Buttons */}
       <div className={styles['button-group']}>

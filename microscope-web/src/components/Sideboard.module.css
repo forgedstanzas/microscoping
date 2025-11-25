@@ -1,0 +1,14 @@
+.sideboard {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px; /* Fixed width */
+  height: 100vh; /* Full viewport height */
+  background-color: var(--node-bg); /* Theme-aware background */
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  display: flex; /* Use flex to make TabManager take full height */
+  flex-direction: column;
+  padding: 10px;
+  box-sizing: border-box; /* Include padding in width/height */
+  z-index: 100; /* Ensure it's above the canvas */
+}

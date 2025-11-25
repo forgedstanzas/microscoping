@@ -29,13 +29,6 @@
   text-align: center;
 }
 
-.description {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  padding: 0.25rem;
-  white-space: pre-wrap; /* Respect newlines in the description */
-}
-
 /* --- Tone Styles --- */
 
 .light {

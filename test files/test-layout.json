@@ -1,0 +1,9 @@
+{
+    "layout": {
+        "constants": {
+            "cardWidth": 200,
+            "gapSize": 20,
+            "zigzagOffset": 100
+        }
+    }
+}

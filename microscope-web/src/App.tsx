@@ -1,17 +1,22 @@
-import { useEffect } from 'react';
-import useTheme from './hooks/useTheme';
-import ThemeSwitcher from './components/ThemeSwitcher';
+import { useState, useEffect } from 'react';
 import { useYjs } from './hooks/useYjs';
 import { NodeService } from './services/NodeService';
-import { Canvas } from './components/Canvas'; // Import the Canvas component
+import { Canvas } from './components/Canvas';
+import { Sideboard } from './components/Sideboard';
+import { usePalette } from './hooks/usePalette';
+import { useLayoutConstants } from './hooks/useLayoutConstants'; // Import useLayoutConstants
 import './App.css';
 
 function App() {
-  // Initialize the theme logic
-  useTheme();
-
   // Initialize Y.js and get sync status
   const { ydoc, isSynced } = useYjs();
+  // Call the palette hook once, here in the common ancestor
+  const paletteState = usePalette();
+  // Call the layout constants hook once, here in the common ancestor
+  const { layoutConstants, updateLayoutConstants } = useLayoutConstants();
+
+  // State for layout mode, lifted to App
+  const [layoutMode, setLayoutMode] = useState<'zigzag' | 'linear'>('zigzag');
 
   useEffect(() => {
     // Only run this logic once when the Y.js document is synced and ready
@@ -38,9 +43,19 @@ function App() {
 
   return (
     <>
-      <ThemeSwitcher />
-      {/* The Canvas component will only render its content when nodes are available */}
-      <Canvas />
+      <Canvas
+        layoutMode={layoutMode}
+        setLayoutMode={setLayoutMode}
+        affirmedWords={paletteState.affirmedWords}
+        bannedWords={paletteState.bannedWords}
+        layoutConstants={layoutConstants} // Pass layout constants
+      />
+      <Sideboard
+        layoutMode={layoutMode}
+        setLayoutMode={setLayoutMode}
+        palette={paletteState}
+        updateLayoutConstants={updateLayoutConstants} // Pass layout setter
+      />
     </>
   );
 }

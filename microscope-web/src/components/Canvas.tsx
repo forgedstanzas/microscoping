@@ -1,15 +1,33 @@
 import { TimelineNodeComponent } from './TimelineNode';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { useNodes } from '../hooks/useNodes';
-import { calculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
+import { calculateLayout as linearCalculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
+import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter'; // Import ZigZag
 import { LegacyOverlay } from './LegacyOverlay';
 import './Canvas.css';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { ViewSettings } from '../types/settings';
 
-export function Canvas() {
+interface CanvasProps {
+  layoutMode: 'zigzag' | 'linear';
+  setLayoutMode: React.Dispatch<React.SetStateAction<'zigzag' | 'linear'>>;
+  affirmedWords: string[];
+  bannedWords: string[];
+  layoutConstants: ViewSettings['layout']['constants']; // New prop
+}
+
+export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
   const nodes = useNodes();
   const [layout, setLayout] = useState<LayoutMap>(new Map());
-  const [dimensions, setDimensions] = useState<DimensionMap>(new Map()); // Re-introduce dimensions state
+  const [dimensions, setDimensions] = useState<DimensionMap>(new Map());
+  const [initialY, setInitialY] = useState(window.innerHeight / 2); // Center Y for ZigZag
+
+  // Update initialY on window resize
+  useEffect(() => {
+    const handleResize = () => setInitialY(window.innerHeight / 2);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // A ref to the ResizeObserver to avoid re-creating it on every render.
   const observer = useRef(
@@ -38,32 +56,35 @@ export function Canvas() {
     if (node !== null) {
       observer.current.observe(node);
     }
-  }, []); // Empty dependency array means this function is stable and won't cause re-renders
+  }, []);
 
-  // Recalculate layout when nodes or dimensions change (Step 3)
+  // Recalculate layout when nodes, dimensions, or layoutMode change
   useEffect(() => {
     if (nodes.length > 0) {
       let dimensionsToUse: DimensionMap;
-      let logMessage: string;
 
       // Check if we have measured dimensions for all nodes
       if (dimensions.size === nodes.length) {
         dimensionsToUse = dimensions;
-        logMessage = '[DEBUG] Calculating layout with REAL dimensions.';
       } else {
         // Fallback to default dimensions if not all nodes have been measured yet
-        logMessage = '[DEBUG] Calculating layout with DEFAULT dimensions (waiting for all measurements).';
         const defaultDims = new Map<string, { width: number; height: number }>();
         nodes.forEach(node => {
-          defaultDims.set(node.id, { width: 300, height: 150 });
+          defaultDims.set(node.id, { width: layoutConstants?.cardWidth ?? 300, height: 150 });
         });
         dimensionsToUse = defaultDims;
       }
       
-      const newLayout = calculateLayout(nodes, dimensionsToUse);
+      let newLayout: LayoutMap;
+      if (layoutMode === 'zigzag') {
+        newLayout = zigZagCalculateLayout(nodes, dimensionsToUse, layoutConstants);
+      } else { // layoutMode === 'linear'
+        newLayout = linearCalculateLayout(nodes, dimensionsToUse, layoutConstants);
+      }
+      
       setLayout(newLayout);
     }
-  }, [nodes, dimensions]); // Re-run when nodes or dimensions state changes
+  }, [nodes, dimensions, layoutMode, layoutConstants]); // Add layoutConstants to dependencies
 
   const handleCanvasClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -79,7 +100,7 @@ export function Canvas() {
         maxScale={3}
         initialScale={0.8}
         initialPositionX={200}
-        initialPositionY={100}
+        initialPositionY={initialY} // Use the calculated initialY
         limitToBounds={false}
         doubleClick={{ disabled: true }}
         panning={{ excluded: ['non-pannable-node'] }}
@@ -109,7 +130,11 @@ export function Canvas() {
                 ref={measureRef} // Attach measureRef
                 data-node-id={node.id} // Attach ID for ResizeObserver
               >
-                <TimelineNodeComponent node={node} />
+                <TimelineNodeComponent
+                  node={node}
+                  bannedWords={bannedWords} // Pass banned words
+                  affirmedWords={affirmedWords} // Pass affirmed words
+                />
               </div>
             );
           })}

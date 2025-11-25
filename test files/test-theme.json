@@ -1,0 +1,8 @@
+{
+    "theme": {
+        "--node-bg": "red",
+        "--node-text": "white",
+        "--node-border-light": "darkred",
+        "--node-border-dark": "darkred"
+    }
+}

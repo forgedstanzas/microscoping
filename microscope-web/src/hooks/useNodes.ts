@@ -21,6 +21,8 @@ export function useNodes(): TimelineNode[] {
 
     // Listen for changes to the nodes map.
     nodesMap.observe(handleChange);
+    // Immediately call handleChange to capture any data that might have synced before the observer was fully active.
+    handleChange();
 
     return () => {
       // Clean up the observer when the component unmounts.
