@@ -7,77 +7,49 @@ This document provides a summary of the `microscope-web` codebase, focusing on e
 Adherence to these conventions is paramount for maintaining consistency and avoiding common pitfalls.
 
 ### 1.1. TypeScript & Imports
-- **Type-Only Imports:** Always explicitly use the `type` keyword for importing TypeScript types or interfaces. The build toolchain (Vite/rolldown) is strict about this, and failure to do so results in runtime errors.
+- **Type-Only Imports:** Always explicitly use the `type` keyword for importing TypeScript types or interfaces. The build toolchain is strict about this, and failure to do so can result in runtime errors.
   ```typescript
   // Correct
   import type { MyType } from './my-file';
   import { myValue, type MyOtherType } from './my-file';
-
-  // Incorrect (will cause runtime errors if MyType is only a type)
-  // import { MyType } from './my-file';
   ```
-- **File Extensions:** Use `.ts` or `.tsx` for TypeScript files.
 - **Strict Typing:** Favor explicit typing where beneficial, but leverage TypeScript's inference where appropriate. Avoid `any` unless absolutely necessary and justified.
 
-### 1.2. Styling
-- **CSS Modules:** Styles are component-scoped using CSS Modules (`.module.css`). This prevents global style clashes.
-- **CSS Variables for Theming:** Theme-dependent values (colors, backgrounds) are defined as CSS variables in `src/index.css` under the `:root` (light theme) and `[data-theme="dark"]` selectors. Components must consume these variables (e.g., `color: var(--node-text);`) for automatic theme adaptation.
-- **Border Tone Consistency:** When defining tone-specific borders, ensure the visual lightness hierarchy is maintained. `--tone-light` should always be visually lighter than `--tone-dark` in both light and dark themes.
+### 1.2. Styling with CSS Modules
+- **Component-Scoped Styles:** All component-specific styling is encapsulated in co-located CSS Module files (e.g., `MyComponent.tsx` and `MyComponent.module.css`).
+- **Global Theme Variables:** All theme-dependent values (colors, backgrounds) are defined as CSS variables in `src/index.css` under the `:root` (light theme) and `[data-theme="dark"]` selectors.
+- **Chained UI Variables:** To allow for both global and specific theming of UI elements, a "chained" variable pattern is used. A global variable (e.g., `--ui-bg`) sets a default for a category of components, and specific variables (e.g., `--button-bg`) use the global variable as their own default (`--button-bg: var(--ui-bg);`). This allows a user's settings file to override either the general `--ui-bg` or the specific `--button-bg`.
+- **Protected Modal Variables:** The custom modal dialog has its own set of non-chained variables (e.g., `--modal-bg`) to ensure it is immune to custom theme overrides and always remains readable.
 
-### 1.3. Component Structure & Naming
-- **Folder Organization (`src/`):**
-    - `components/`: Reusable React components (e.g., `TimelineNodeComponent.tsx`, `ThemeSwitcher.tsx`).
-    - `hooks/`: Custom React hooks, often encapsulating logic for state interaction or side effects (e.g., `useYjs.ts`, `useNodes.ts`).
-    - `services/`: Encapsulates business logic and data manipulation, especially interactions with the Y.js document (e.g., `NodeService.ts`, `SessionManager.ts`).
-    - `layout/`: Pure functions (Layout Adapters) that calculate visual positioning from data (e.g., `LinearAdapter.ts`, `ZigZagAdapter.ts`).
-    - `logic/`: Pure business logic not directly tied to a service or UI (e.g., `PaletteEnforcer.ts`).
-    - `utils/`: Generic, reusable utility functions (e.g., `debounce.ts`).
-    - `types/`: Shared TypeScript type and interface definitions.
-- **Component Naming:** PascalCase for component files and names (e.g., `MyComponent.tsx`).
-- **CSS Module Naming:** kebab-case for CSS module files (e.g., `my-component.module.css`).
-
-### 1.4. React Best Practices
-- **Memoization:** Use `React.memo` for functional components that re-render frequently with the same props, especially if their parent re-renders. This is crucial for performance and avoiding UI bugs (e.g., preventing `contentEditable` fields from losing focus during layout recalculations).
+### 1.3. React Best Practices
+- **Memoization:** Use `React.memo` for components that are expensive to render, especially if they are part of a list and their parent re-renders frequently.
 - **`useCallback` / `useMemo`:** Utilize these hooks for optimizing expensive computations or preventing unnecessary re-renders due to referential inequality of functions/objects passed as props to memoized children.
-- **Controlled vs. Uncontrolled Components:** For `contentEditable` elements, carefully manage the synchronization between React state/props and the DOM's `innerText`. If an element is actively being edited, avoid programmatic updates to `innerText` to prevent cursor jumps or loss of focus. The `HighlightableText` component's `useEffect` logic is a good example of this pattern (`document.activeElement !== editorRef.current`).
+- **`contentEditable`:** Be extremely cautious when mixing `contentEditable` with React's rendering lifecycle. Avoid programmatically setting `innerText` on a focused element. Use `useEffect` with `document.activeElement` checks to sync external state only when the element is not being actively edited by the user.
 
 ## 2. Architectural Patterns & Core Technologies
 
-### 2.1. Y.js for Collaborative State Management
-- **Central Source of Truth:** The entire application state is primarily managed by a singleton Y.js document (`ydoc`). This enables real-time, multi-client collaboration out-of-the-box.
-- **Reactive Hooks:** Custom hooks (e.g., `useNodes`) are used to subscribe to changes in the Y.js document and update React component state.
-- **Transactions:** Always wrap multiple Y.js modifications within `ydoc.transact(() => { ... });` to ensure atomicity, optimize performance, and prevent intermediate state propagation.
+### 2.1. State Management
+- **Primary State (Y.js):** All core application data that requires persistence and collaboration (e.g., Timeline Nodes, Palette word lists) is stored in a singleton Y.js document (`ydoc`). Logic is encapsulated in custom hooks (e.g., `useNodes`, `usePalette`) that subscribe to changes in Y.js data structures and update React state.
+- **Global UI State ("Lift State Up"):** Non-collaborative, session-specific global state (e.g., theme, layout constants, palette state) is managed by custom hooks called a single time in the root `App.tsx` component. The resulting state and dispatch functions are then passed down to child components via props. This ensures a single source of truth for UI state and prevents synchronization issues between different parts of the component tree.
+- **Global Context Providers:** For state that needs to be accessed by deeply nested components without excessive prop-drilling, a React Context is used. This pattern is implemented for:
+  - **Theme:** `ThemeProvider` and `useSharedTheme`.
+  - **Modal Dialogs:** `ModalProvider` and `useModal`.
 
-### 2.2. Two-Pass Layout / Dynamic Sizing
-- **Measurement Strategy:** Components that require dynamic sizing (like nodes with variable text content) are rendered, then their actual dimensions are measured using `ResizeObserver`. These measured dimensions are then fed back into a layout calculation.
-- **Layout Adapters:** Pure functions (`LinearAdapter.ts`, `ZigZagAdapter.ts`) calculate `(x, y)` positions based on node data and measured dimensions.
-- **Initial Render Fallback:** During the initial render (before dimensions are fully measured), a fallback to default dimensions is used to prevent layout errors and ensure immediate visibility.
+### 2.2. Collaborative UX Patterns
+- **One-Time Event Log (for Sharing):** To implement a "share" feature that is resistant to race conditions, an event log pattern is used. The sender pushes a unique, timestamped event object to a `Y.Array`. Receiving clients observe this array, process each new event only once (by tracking its unique ID), and can then act on it (e.g., by prompting the user to accept the shared settings). This avoids the "last write wins" problem of using a simple `Y.Map` key for transient messages.
+- **Custom Modal for Asynchronous Actions:** To handle browser security features that block dialogs (`window.confirm`) from background tabs, a custom modal system was built. When a collaborative event arrives that requires user confirmation, the application shows a non-intrusive notification or state change. The custom modal confirmation is only shown after the user interacts with the UI in that tab, guaranteeing it is user-initiated.
 
-### 2.3. Responsive UI with "Peel-Off" Logic
-- **Sideboard:** The main responsive panel uses a `ResizeObserver` to monitor its own available vertical height.
-- **Tab Management:** Content sections (`Meta`, `Palette`, `Legacies`) are dynamically grouped into tabs based on a "Peel-Off" priority queue. If vertical space is constrained, lower-priority sections move to their own tabs.
+### 2.3. Dynamic & Responsive Layout
+- **"Measure-Then-Render" for Dynamic Content:** For complex layouts where container size depends on dynamic children (like the Sideboard's "Peel-Off" logic), a two-phase pattern is used:
+  1.  **Measure Pass:** All child components are rendered into a hidden, off-screen container (`visibility: hidden`, `position: absolute`). `useEffect` and `useRef` are used to measure the true `offsetHeight` of each child.
+  2.  **Display Pass:** The measured heights are stored in state. A `useMemo` hook then uses these precise measurements to accurately calculate the final layout (e.g., how many tabs are needed). The component re-renders, showing only the correctly laid-out components.
+- **Fixed-Position UI Elements:** Top-level UI elements like the `Sideboard` use `position: fixed` to ensure they are pinned to the viewport and do not scroll with the main canvas content. The root `body` has `overflow: hidden` to prevent page-level scrollbars.
 
-## 3. Security Standards
-
-While this project is a client-side application, certain security considerations are relevant:
-
-### 3.1. `contentEditable` Usage
-- **XSS Risk:** `contentEditable` fields, especially when combined with `dangerouslySetInnerHTML`, can be a source of Cross-Site Scripting (XSS) vulnerabilities if user input is directly rendered without sanitization. In this project, `innerText` is used for input values, which mitigates direct HTML injection for text content. However, if any `dangerouslySetInnerHTML` is used with user-provided data, ensure thorough sanitization on input or before rendering.
-- **Focus Management:** As observed, improper handling can lead to frustrating UX, but also potentially subtle interaction bugs.
-
-### 3.2. Data Persistence & Export
-- **Client-Side Only:** Data is stored in IndexedDB (via `y-indexeddb`) and exported as local JSON files. There is no server-side component for data storage, so traditional server-side security concerns (e.g., SQL injection, API key exposure) are not applicable.
-- **File Handling:** The import function directly processes user-provided JSON files. Ensure robust error handling for malformed files. Confirmation dialogs are used for destructive operations like overwriting sessions.
-
-### 3.3. Y.js & Collaboration
-- **Signaling Server:** `y-webrtc` relies on public signaling servers for peer discovery. While data is peer-to-peer encrypted, awareness of the signaling server's role in connection establishment is important. For sensitive applications, self-hosting a signaling server would be advisable.
-- **Trust Model:** The current application assumes a high trust model among collaborators in a session, as all clients have full read/write access to the shared Y.js document.
+## 3. Separation of Concerns
+- **Services vs. Hooks:**
+  - **Hooks** (e.g., `useViewSettings`) are used for logic that is stateful and tied to the React component lifecycle. They manage React state (`useState`) and side effects (`useEffect`).
+  - **Services** (e.g., `SessionManager`, `ViewSettingsService`) are refactored to be collections of pure, static functions. They contain business logic that is independent of the UI lifecycle. UI-related tasks like showing a confirmation dialog are handled in the component layer, which then calls the service with the final, confirmed data.
 
 ## 4. Good Practices / Anti-Patterns to Avoid
-
--   **Avoid Inline Styles for Layout/Positioning:** Prefer CSS Modules for styling, especially for properties affecting layout (`position`, `top`, `left`, `transform`, `width`, `height`). Inline styles should be reserved for truly dynamic, calculated values.
--   **Beware of `visibility: hidden`:** When measuring elements with `ResizeObserver`, `visibility: hidden` can prevent accurate dimension reporting. Prefer `opacity: 0` or rendering off-screen (but still in the DOM flow) if invisibility during measurement is required.
--   **`contentEditable` Pitfalls:** Be extremely cautious when mixing `contentEditable` with React's rendering lifecycle. Avoid directly setting `innerText` on a focused `contentEditable` element programmatically. Use `useEffect` with `document.activeElement` checks to sync external state only when the element is not active.
--   **Debugging:** When encountering rendering or layout issues, use a methodical, step-by-step debugging approach with `console.log` at critical junctures to trace data flow and state changes. Isolate the problem to the smallest possible unit.
--   **Referential Equality:** Be mindful of `useCallback` and `useMemo` for functions and objects passed as props to memoized components to prevent unnecessary re-renders.
--   **Consistency:** Strive for UI/UX consistency. If one dropdown is a standard browser control, similar dropdowns should follow suit unless there's a strong, justified reason for custom styling.
+- **Y.js Sync Awareness:** When creating a hook that interacts with Y.js data, always get the `isSynced` flag from the `useYjs` hook. Do not attempt to read from or attach observers to Y.js data structures until `isSynced` is `true`. This prevents race conditions where the hook might attach to a stale data object before the persisted state from IndexedDB is loaded.
+- **Full-Page Layout:** For a full-page app, remove the default Vite/CRA styles from `App.css` and `index.css` (e.g., `max-width`, `padding`, `display: flex`). The `body` and `#root` should be configured to fill the viewport (`height: 100vh`, `overflow: hidden`).
