@@ -1,5 +1,5 @@
 /* Layer 1: The SVG container for the lines and hover targets */
-.periodTrackSvg {
+.trackSvg {
   position: absolute;
   top: 0;
   left: 0;

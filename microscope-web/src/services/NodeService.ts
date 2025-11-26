@@ -133,6 +133,42 @@ export class NodeService {
   }
 
   /**
+   * Inserts a new Event node between two existing nodes in a period's timeline.
+   * @param prevNodeId - The ID of the node before the insertion point (can be a Period or Event).
+   * @param nextNodeId - The ID of the node after the insertion point (must be an Event).
+   * @returns The newly created TimelineNode, or undefined if insertion fails.
+   */
+  static insertEventBetween(prevNodeId: string, nextNodeId: string): TimelineNode | undefined {
+    const prevNode = nodesMap.get(prevNodeId);
+    const nextNode = nodesMap.get(nextNodeId);
+
+    if (!prevNode || !nextNode) {
+      console.error('NodeService: Cannot insert event between non-existent nodes.');
+      return undefined;
+    }
+    
+    // Determine the parent and inherit its tone
+    const parentId = prevNode.type === 'period' ? prevNode.id : prevNode.parentId;
+    const parentNode = parentId ? nodesMap.get(parentId) : undefined;
+    
+    if (!parentNode || (nextNode.parentId !== parentId && nextNode.parentId !== prevNode.id)) {
+        console.error('NodeService: Nodes do not share a common, valid parent.');
+        return undefined;
+    }
+
+    const newOrder = (prevNode.order + nextNode.order) / 2;
+
+    return NodeService.addNode({
+      type: 'event',
+      title: 'New Event',
+      isGhost: true,
+      parentId: parentId,
+      order: newOrder,
+      tone: parentNode.tone,
+    });
+  }
+
+  /**
    * Adds a new Event node as a child of a specified Period node.
    * @param parentId - The ID of the parent Period node.
    * @returns The newly created TimelineNode, or undefined if creation fails.

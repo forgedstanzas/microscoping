@@ -14,24 +14,38 @@ interface EventButtonOverlayProps {
 }
 
 interface EventButtonPlacement {
-  id: string; // Period ID
+  id: string; // The ID of the node (Period or Event) that the button is attached to
   button: { x: number; y: number };
-  parentId: string; // The period this button belongs to
+  parentId: string; // The ID of the Period this button will add an event to
   direction: 'above' | 'below';
 }
 
 export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, layout, layoutConstants, layoutMode, nodeBorderWidth }) => {
-  const [hoveredPeriodId, setHoveredPeriodId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null); // Renamed state to hoveredNodeId
 
   const eventButtonPlacements = useMemo(() => {
-    const periodNodes = nodes
-      .filter(node => node.type === 'period' && layout.has(node.id))
-      .sort((a, b) => a.order - b.order);
-
     const placements: EventButtonPlacement[] = [];
+    const allPeriodNodes = nodes.filter(node => node.type === 'period' && layout.has(node.id));
 
-    periodNodes.forEach(period => {
-      const periodLayout = layout.get(period.id)!;
+    allPeriodNodes.forEach(period => {
+      // Find all events for the current period
+      const childEvents = nodes
+        .filter(node => node.type === 'event' && node.parentId === period.id && layout.has(node.id))
+        .sort((a, b) => a.order - b.order);
+
+      let targetNodeForButton: TimelineNode;
+
+      if (childEvents.length === 0) {
+        // If no events, the button goes on the period itself
+        targetNodeForButton = period;
+      } else {
+        // If there are events, the button goes on the last one
+        targetNodeForButton = childEvents[childEvents.length - 1];
+      }
+
+      // Now, calculate the button placement based on the targetNode
+      const targetLayout = layout.get(targetNodeForButton.id);
+      if (!targetLayout) return; // Should not happen if layout.has(node.id) check is sufficient
 
       // Determine the default layout direction based on the overall layout mode.
       const isZigZag = layoutMode === 'zigzag';
@@ -40,51 +54,56 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
 
       // Use the override from layoutConstants if it exists, otherwise use the calculated default.
       const direction =
-        period.tone === 'light'
+        targetNodeForButton.tone === 'light'
           ? layoutConstants?.eventLayoutLightPeriod ?? eventLayoutLightDefault
           : layoutConstants?.eventLayoutDarkPeriod ?? eventLayoutDarkDefault;
 
-      let buttonX = periodLayout.x + periodLayout.width / 2;
+      const buttonX = targetLayout.x + targetLayout.width / 2;
       let buttonY;
 
       if (direction === 'above') {
-        buttonY = periodLayout.y; // Center of button on top edge
+        buttonY = targetLayout.y; // Center of button on top edge
       } else { // 'below'
-        buttonY = periodLayout.y + periodLayout.height; // Center of button on bottom edge
+        buttonY = targetLayout.y + targetLayout.height; // Center of button on bottom edge
       }
 
       placements.push({
-        id: period.id,
+        id: targetNodeForButton.id, // The ID of the node that gets the hover effect
         button: { x: buttonX, y: buttonY },
-        parentId: period.id,
-        direction, // Add direction to the placement object
+        parentId: period.id, // The parentId for the NEW event is always the period's ID
+        direction: direction,
       });
     });
     return placements;
   }, [nodes, layout, layoutConstants, layoutMode]);
 
+  // Rename handleAddEvent to be more specific if needed, but it calls the correct service function
   const handleAddEvent = useCallback((parentId: string) => {
     NodeService.addEventToPeriod(parentId);
   }, []);
 
   return (
-    <svg className={styles.eventButtonSvg} onMouseLeave={() => setHoveredPeriodId(null)}>
+    <svg className={styles.eventButtonSvg} onMouseLeave={() => setHoveredNodeId(null)}> // Renamed state usage
       {eventButtonPlacements.map(placement => {
-        const isHovered = hoveredPeriodId === placement.id;
-        const periodLayout = layout.get(placement.parentId)!;
-        const hoverStripHeight = nodeBorderWidth; // Use prop instead of hardcoded value
+        const isHovered = hoveredNodeId === placement.id;
+        // Get the layout for the node the button is actually attached to
+        const targetNodeLayout = layout.get(placement.id);
+        const hoverStripHeight = nodeBorderWidth; 
+
+        // Safety check, don't render if we don't have layout info for the target
+        if (!targetNodeLayout) return null;
 
         return (
           <g
             key={placement.id}
             className={styles.eventButtonSegment}
-            onMouseEnter={() => setHoveredPeriodId(placement.id)}
+            onMouseEnter={() => setHoveredNodeId(placement.id)} // Renamed state usage
           >
             {/* An invisible hover target as a strip on the top or bottom edge */}
             <rect
-                x={periodLayout.x}
-                y={placement.direction === 'above' ? periodLayout.y : periodLayout.y + periodLayout.height - hoverStripHeight}
-                width={periodLayout.width}
+                x={targetNodeLayout.x}
+                y={placement.direction === 'above' ? targetNodeLayout.y : targetNodeLayout.y + targetNodeLayout.height - hoverStripHeight}
+                width={targetNodeLayout.width}
                 height={hoverStripHeight}
                 fill="transparent"
                 pointerEvents="all" // Make the rect catch mouse events
@@ -104,8 +123,8 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
               width="30"
               height="30"
               style={{
-                opacity: isHovered ? 1 : 0,
-                pointerEvents: isHovered ? 'all' : 'none',
+                opacity: isHovered ? 1 : 0, // Simplified, as placement.hasNoEvents is gone
+                pointerEvents: isHovered ? 'all' : 'none', // Simplified
                 overflow: 'visible',
               }}
             >

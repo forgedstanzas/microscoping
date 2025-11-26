@@ -2,20 +2,22 @@ import { TimelineNodeComponent } from './TimelineNode';
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { useNodes } from '../hooks/useNodes';
 import { calculateLayout as linearCalculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
-import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter'; // Import ZigZag
+import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter';
 import { LegacyOverlay } from './LegacyOverlay';
-import { PeriodTrackOverlay } from './PeriodTrackOverlay'; // Import PeriodTrackOverlay
-import { EventButtonOverlay } from './EventButtonOverlay'; // Import EventButtonOverlay
+import { TrackOverlay, type TrackSegment } from './TrackOverlay';
+import { EventButtonOverlay } from './EventButtonOverlay';
+import { NodeService } from '../services/NodeService';
 import './Canvas.css';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ViewSettings } from '../types/settings';
+import type { TimelineNode } from '../types/timeline';
 
 interface CanvasProps {
   layoutMode: 'zigzag' | 'linear';
   setLayoutMode: React.Dispatch<React.SetStateAction<'zigzag' | 'linear'>>;
   affirmedWords: string[];
   bannedWords: string[];
-  layoutConstants: ViewSettings['layout']['constants']; // New prop
+  layoutConstants: ViewSettings['layout']['constants'];
 }
 
 export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
@@ -23,10 +25,9 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [layout, setLayout] = useState<LayoutMap>(new Map());
   const [dimensions, setDimensions] = useState<DimensionMap>(new Map());
-  const [initialY, setInitialY] = useState(window.innerHeight / 2); // Center Y for ZigZag
-  const [nodeBorderWidth, setNodeBorderWidth] = useState(8); // Default value
+  const [initialY, setInitialY] = useState(window.innerHeight / 2);
+  const [nodeBorderWidth, setNodeBorderWidth] = useState(8);
 
-  // Read the node border width from CSS variables when the component mounts
   useEffect(() => {
     const value = getComputedStyle(document.documentElement).getPropertyValue('--node-border-width');
     if (value) {
@@ -34,14 +35,12 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
     }
   }, []);
 
-  // Update initialY on window resize
   useEffect(() => {
     const handleResize = () => setInitialY(window.innerHeight / 2);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // A ref to the ResizeObserver to avoid re-creating it on every render.
   const observer = useRef(
     new ResizeObserver(entries => {
       setDimensions(prev => {
@@ -63,23 +62,18 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
     })
   );
 
-  // The callback ref that will be attached to each node for measurement.
   const measureRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
       observer.current.observe(node);
     }
   }, []);
 
-  // Recalculate layout when nodes, dimensions, or layoutMode change
   useEffect(() => {
     if (nodes.length > 0) {
       let dimensionsToUse: DimensionMap;
-
-      // Check if we have measured dimensions for all nodes
       if (dimensions.size === nodes.length) {
         dimensionsToUse = dimensions;
       } else {
-        // Fallback to default dimensions if not all nodes have been measured yet
         const defaultDims = new Map<string, { width: number; height: number }>();
         nodes.forEach(node => {
           defaultDims.set(node.id, { width: layoutConstants?.cardWidth ?? 300, height: 150 });
@@ -90,13 +84,98 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
       let newLayout: LayoutMap;
       if (layoutMode === 'zigzag') {
         newLayout = zigZagCalculateLayout(nodes, dimensionsToUse, layoutConstants);
-      } else { // layoutMode === 'linear'
+      } else {
         newLayout = linearCalculateLayout(nodes, dimensionsToUse, layoutConstants);
       }
       
       setLayout(newLayout);
     }
-  }, [nodes, dimensions, layoutMode, layoutConstants]); // Add layoutConstants to dependencies
+  }, [nodes, dimensions, layoutMode, layoutConstants]);
+
+  // --- Segment Calculation Logic Moved Here ---
+  const periodTrackSegments = useMemo<TrackSegment[]>(() => {
+    const periodNodes = nodes
+      .filter(node => node.type === 'period' && layout.has(node.id))
+      .sort((a, b) => a.order - b.order);
+    const segments: TrackSegment[] = [];
+    const GAP_HORIZONTAL = layoutConstants?.gapSize ?? 50;
+    const PERIOD_MARGIN = 34;
+    const totalGap = GAP_HORIZONTAL + PERIOD_MARGIN;
+    for (let i = 0; i < periodNodes.length - 1; i++) {
+      const prevPeriod = periodNodes[i];
+      const nextPeriod = periodNodes[i + 1];
+      const prevLayout = layout.get(prevPeriod.id)!;
+      const nextLayout = layout.get(nextPeriod.id)!;
+      const cx1 = prevLayout.x + prevLayout.width / 2;
+      const cy1 = prevLayout.y + prevLayout.height / 2;
+      const cx2 = nextLayout.x + nextLayout.width / 2;
+      const cy2 = nextLayout.y + nextLayout.height / 2;
+      const rightEdgeOfPrevNode = prevLayout.x + prevLayout.width;
+      const buttonX = rightEdgeOfPrevNode + totalGap / 2;
+      const t = (buttonX - cx1) / (cx2 - cx1);
+      const buttonY = cy1 + t * (cy2 - cy1);
+      segments.push({
+        id: `${prevPeriod.id}-${nextPeriod.id}`,
+        line: { x1: cx1, y1: cy1, x2: cx2, y2: cy2 },
+        button: { x: buttonX, y: buttonY },
+        onInsertPayload: { prevNodeId: prevPeriod.id, nextNodeId: nextPeriod.id },
+      });
+    }
+    return segments;
+  }, [nodes, layout, layoutConstants]);
+
+  const eventTrackSegments = useMemo<TrackSegment[]>(() => {
+    const segments: TrackSegment[] = [];
+    const eventsByParent = new Map<string, TimelineNode[]>();
+    nodes.forEach(node => {
+      if (node.type === 'event' && node.parentId && layout.has(node.id)) {
+        if (!eventsByParent.has(node.parentId)) {
+          eventsByParent.set(node.parentId, []);
+        }
+        eventsByParent.get(node.parentId)!.push(node);
+      }
+    });
+
+    for (const [parentId, events] of eventsByParent.entries()) {
+      const parentNode = nodes.find(n => n.id === parentId);
+      if (!parentNode || !layout.has(parentNode.id)) continue;
+      const sortedEvents = events.sort((a, b) => a.order - b.order);
+      const allNodesInTrack = [parentNode, ...sortedEvents];
+      for (let i = 0; i < allNodesInTrack.length - 1; i++) {
+        const prevNode = allNodesInTrack[i];
+        const nextNode = allNodesInTrack[i + 1];
+        const prevLayout = layout.get(prevNode.id)!;
+        const nextLayout = layout.get(nextNode.id)!;
+        const cx1 = prevLayout.x + prevLayout.width / 2;
+        const cy1 = prevLayout.y + prevLayout.height / 2;
+        const cx2 = nextLayout.x + nextLayout.width / 2;
+        const cy2 = nextLayout.y + nextLayout.height / 2;
+        const buttonX = cx1;
+        const topNodeLayout = prevLayout.y < nextLayout.y ? prevLayout : nextLayout;
+        const bottomNodeLayout = prevLayout.y < nextLayout.y ? nextLayout : prevLayout;
+        const visibleTrackStartY = topNodeLayout.y + topNodeLayout.height;
+        const visibleTrackEndY = bottomNodeLayout.y;
+        const buttonY = (visibleTrackStartY + visibleTrackEndY) / 2;
+        segments.push({
+          id: `${prevNode.id}-${nextNode.id}`,
+          line: { x1: cx1, y1: cy1, x2: cx2, y2: cy2 },
+          button: { x: buttonX, y: buttonY },
+          onInsertPayload: { prevNodeId: prevNode.id, nextNodeId: nextNode.id },
+        });
+      }
+    }
+    return segments;
+  }, [nodes, layout]);
+
+  // --- Insert Callbacks ---
+  const handleInsertPeriod = useCallback((payload: { prevNodeId: string, nextNodeId: string }) => {
+    NodeService.insertPeriodBetween(payload.prevNodeId, payload.nextNodeId);
+  }, []);
+
+  const handleInsertEvent = useCallback((payload: { prevNodeId: string, nextNodeId: string }) => {
+    NodeService.insertEventBetween(payload.prevNodeId, payload.nextNodeId);
+  }, []);
+
 
   const handleCanvasClick = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -107,30 +186,24 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
 
   const handleRecenter = () => {
     if (!transformRef.current || layout.size === 0) return;
-
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
     for (const node of layout.values()) {
       minX = Math.min(minX, node.x);
       minY = Math.min(minY, node.y);
       maxX = Math.max(maxX, node.x + node.width);
       maxY = Math.max(maxY, node.y + node.height);
     }
-
     const contentWidth = maxX - minX;
     const contentHeight = maxY - minY;
     const contentCenterX = minX + contentWidth / 2;
     const contentCenterY = minY + contentHeight / 2;
-
     const { setTransform } = transformRef.current;
-    
-    // Animate the pan and zoom
     setTransform(
       -contentCenterX + window.innerWidth / 2,
       -contentCenterY + window.innerHeight / 2,
-      1, // Reset zoom to 1
-      600, // Animation time
-      'easeOut' // Animation type
+      1,
+      600,
+      'easeOut'
     );
   };
 
@@ -143,7 +216,7 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
         maxScale={3}
         initialScale={0.8}
         initialPositionX={200}
-        initialPositionY={initialY} // Use the calculated initialY
+        initialPositionY={initialY}
         limitToBounds={false}
         doubleClick={{ disabled: true }}
         panning={{ excluded: ['non-pannable-node'] }}
@@ -152,22 +225,22 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
           wrapperStyle={{ width: '100vw', height: '100vh' }}
           contentStyle={{ width: '100%', height: '100%' }}
         >
-          {/* Background div to capture clicks for blurring active elements */}
           <div className="canvas-background" onMouseDown={handleCanvasClick} />
           
           <LegacyOverlay nodes={nodes} layout={layout} />
-          <PeriodTrackOverlay nodes={nodes} layout={layout} layoutConstants={layoutConstants} />
+          <TrackOverlay segments={periodTrackSegments} onInsert={handleInsertPeriod} insertButtonTitle="Add period" />
+          <TrackOverlay segments={eventTrackSegments} onInsert={handleInsertEvent} insertButtonTitle="Add event" />
           <EventButtonOverlay
             nodes={nodes}
             layout={layout}
             layoutConstants={layoutConstants}
             layoutMode={layoutMode}
-            nodeBorderWidth={nodeBorderWidth} // Pass the new prop
+            nodeBorderWidth={nodeBorderWidth}
           />
 
           {nodes.map(node => {
             const nodeLayout = layout.get(node.id);
-            if (!nodeLayout) return null; // Don't render if layout not ready
+            if (!nodeLayout) return null;
 
             const style = {
               transform: `translate(${nodeLayout.x}px, ${nodeLayout.y}px)`,
@@ -178,13 +251,13 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
                 key={node.id}
                 className='node-wrapper'
                 style={style}
-                ref={measureRef} // Attach measureRef
-                data-node-id={node.id} // Attach ID for ResizeObserver
+                ref={measureRef}
+                data-node-id={node.id}
               >
                 <TimelineNodeComponent
                   node={node}
-                  bannedWords={bannedWords} // Pass banned words
-                  affirmedWords={affirmedWords} // Pass affirmed words
+                  bannedWords={bannedWords}
+                  affirmedWords={affirmedWords}
                 />
               </div>
             );
