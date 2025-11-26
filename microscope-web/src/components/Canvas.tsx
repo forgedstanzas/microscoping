@@ -19,9 +19,10 @@ interface CanvasProps {
   affirmedWords: string[];
   bannedWords: string[];
   layoutConstants: ViewSettings['layout']['constants'];
+  selectedLegacy: string | null;
 }
 
-export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
+export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants, selectedLegacy }: CanvasProps) {
   const nodes = useNodes();
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [layout, setLayout] = useState<LayoutMap>(new Map());
@@ -230,7 +231,7 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
         >
           <div className="canvas-background" onMouseDown={handleCanvasClick} />
           
-          <LegacyOverlay nodes={nodes} layout={layout} />
+          <LegacyOverlay nodes={nodes} layout={layout} selectedLegacy={selectedLegacy} />
           <TrackOverlay segments={periodTrackSegments} onInsert={handleInsertPeriod} insertButtonTitle="Add period" />
           <TrackOverlay segments={eventTrackSegments} onInsert={handleInsertEvent} insertButtonTitle="Add event" />
           <EventButtonOverlay
@@ -261,6 +262,7 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
                   node={node}
                   bannedWords={bannedWords}
                   affirmedWords={affirmedWords}
+                  selectedLegacy={selectedLegacy}
                 />
               </div>
             );

@@ -11,9 +11,10 @@ interface TimelineNodeProps {
   node: TimelineNode;
   affirmedWords: string[];
   bannedWords: string[];
+  selectedLegacy: string | null;
 }
 
-function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: TimelineNodeProps) {
+function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selectedLegacy }: TimelineNodeProps) {
   const titleRef = useRef<HTMLDivElement>(null);
   const { showConfirm } = useModal(); // Correctly use the modal hook
 
@@ -69,6 +70,9 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: Tim
      }
   };
 
+  // Determine if the node should be dimmed
+  const isDimmed = !!selectedLegacy && !node.isBookend && !(node.tags || []).includes(selectedLegacy);
+
   return (
     <div
       className={clsx(
@@ -76,7 +80,8 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: Tim
         styles.node,
         styles[node.tone],
         { [styles.ghost]: node.isGhost },
-        { [styles.event]: node.type === 'event' }
+        { [styles.event]: node.type === 'event' },
+        { [styles.dimmed]: isDimmed } // Apply dimmed class
       )}
       // Add a data attribute for e2e testing or styling if needed
       data-node-id={node.id}

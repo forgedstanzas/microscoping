@@ -17,6 +17,8 @@ function App() {
 
   // State for layout mode, lifted to App
   const [layoutMode, setLayoutMode] = useState<'zigzag' | 'linear'>('zigzag');
+  // State for selected legacy, for focus mode
+  const [selectedLegacy, setSelectedLegacy] = useState<string | null>(null);
 
   useEffect(() => {
     // Only run this logic once when the Y.js document is synced and ready
@@ -49,12 +51,15 @@ function App() {
         affirmedWords={paletteState.affirmedWords}
         bannedWords={paletteState.bannedWords}
         layoutConstants={viewSettings.layoutConstants} // Pass layout constants
+        selectedLegacy={selectedLegacy} // Pass selected legacy
       />
       <Sideboard
         layoutMode={layoutMode}
         setLayoutMode={setLayoutMode}
         palette={paletteState}
         viewSettings={viewSettings} // Pass all view settings and functions
+        selectedLegacy={selectedLegacy} // Pass selected legacy
+        onLegacySelect={setSelectedLegacy} // Pass setter
       />
       <Modal />
     </>

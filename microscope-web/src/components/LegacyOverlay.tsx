@@ -6,6 +6,7 @@ import stringHash from '@sindresorhus/string-hash';
 interface LegacyOverlayProps {
   nodes: TimelineNode[];
   layout: LayoutMap;
+  selectedLegacy: string | null;
 }
 
 interface ThreadEdge {
@@ -13,6 +14,7 @@ interface ThreadEdge {
   tag: string;
   d: string; // SVG path command
   strokeWidth: number;
+  opacity: number;
 }
 
 const THREAD_CONFIG = {
@@ -34,7 +36,7 @@ function tagToColor(tag: string): string {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
-export function LegacyOverlay({ nodes, layout }: LegacyOverlayProps) {
+export function LegacyOverlay({ nodes, layout, selectedLegacy }: LegacyOverlayProps) {
   const edges = useMemo(() => {
     if (layout.size === 0 || nodes.length === 0) {
       return [];
@@ -62,6 +64,7 @@ export function LegacyOverlay({ nodes, layout }: LegacyOverlayProps) {
       // Sort nodes by their horizontal layout position to create the sequence
       const sortedNodes = taggedNodes.sort((a, b) => (layout.get(a.id)?.x ?? 0) - (layout.get(b.id)?.x ?? 0));
       const tagFrequency = sortedNodes.length;
+      const isSelected = selectedLegacy === tag;
 
       for (let i = 0; i < sortedNodes.length - 1; i++) {
         const sourceNode = sortedNodes[i];
@@ -97,23 +100,27 @@ export function LegacyOverlay({ nodes, layout }: LegacyOverlayProps) {
         
         const d = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
 
-        // --- Thickness Calculation ---
-        const strokeWidth = Math.min(
+        // --- Style Calculation ---
+        const baseStrokeWidth = Math.min(
           THREAD_CONFIG.baseThickness + (tagFrequency - 1) * THREAD_CONFIG.factor,
           THREAD_CONFIG.maxThickness
         );
+        
+        const strokeWidth = isSelected ? baseStrokeWidth + 2 : baseStrokeWidth;
+        const opacity = isSelected ? 1.0 : 0.2;
 
         calculatedEdges.push({
           id: `${sourceNode.id}-${targetNode.id}-${tag}`,
           tag,
           d,
           strokeWidth,
+          opacity,
         });
       }
     }
 
     return calculatedEdges;
-  }, [nodes, layout]);
+  }, [nodes, layout, selectedLegacy]);
 
   return (
     <svg
@@ -137,7 +144,7 @@ export function LegacyOverlay({ nodes, layout }: LegacyOverlayProps) {
             stroke={tagToColor(edge.tag)}
             strokeWidth={edge.strokeWidth}
             strokeLinecap="round"
-            opacity={0.8}
+            opacity={edge.opacity}
           />
         ))}
       </g>

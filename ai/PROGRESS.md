@@ -142,3 +142,69 @@ The implementation of the dynamic layout system was a significant challenge that
 
 - **Phase 4 Complete:** All objectives for Phase 4, including all sub-steps of Step 3, are now implemented, stable, and verified.
 - **Next Step:** Awaiting new user requirements.
+
+---
+## 進捗状況 (Phase 4 Progress)
+
+### Step 1: Interactive Palette & Highlighting
+- **Status:** Complete
+- **Details:** The initial goal of highlighting "Yes" list words was expanded into a full-featured, collaborative palette system.
+  - **Data Layer:** A `usePalette` hook was created to manage `affirmedWords` and `bannedWords` as `Y.Array`s in the shared Y.js document.
+  - **UI:** The `SideboardPalette` component was built with side-by-side, scrollable lists for both word types, including text inputs and `+/-` buttons for management. "Enter" key submission was also added.
+  - **Highlighting:** `PaletteEnforcer.ts` and `HighlightableText.tsx` were refactored to consume both lists and apply distinct green (affirmed) and red (banned) highlights to words in node descriptions.
+  - **Bug Fixes:** A significant number of bugs were resolved to make this feature robust:
+    - Fixed a Y.js race condition by making the `usePalette` hook sync-aware.
+    - Resolved collaborative inconsistencies by lifting palette and theme state into `App.tsx` and a new `ThemeContext`, creating a single source of truth.
+    - Corrected a data-type issue in `SessionManager.ts` to ensure palette lists are properly saved and restored during import/export.
+
+### Step 2: View Settings Loader & UI Polish
+- **Status:** Complete
+- **Details:** Implemented a system for users to customize the application's appearance and layout by uploading a JSON file. This step also included major UI bug fixes and architectural improvements.
+  - **Core Logic:** A `useViewSettings` hook was created to manage all custom settings state, including theme colors and layout constants. Layout adapters were refactored to accept these dynamic constants.
+  - **UI & Features:**
+    - "Upload View", "Reset View", and "Share View" buttons were added to the settings panel.
+    - The "Share View" feature was implemented using a race-condition-proof event log in the Y.js document, ensuring reliable, one-time sharing between clients.
+    - A global, custom Modal Dialog system (`ModalContext` and `<Modal/>`) was built to replace all native browser prompts (`alert`, `confirm`), improving UX and resolving issues with background tabs.
+  - **CSS & Layout Fixes:**
+    - Fixed a "color bleed" issue by implementing a chained CSS variable system (`--ui-bg`).
+    - Resolved long-standing layout bugs by removing incorrect default styles, pinning the `Sideboard` to the viewport, and implementing a robust, measurement-based "Peel-Off" logic for the sideboard tabs.
+    - Added a "Re-center" button to the canvas as a user-friendly alternative to scrollbars.
+
+---
+## ➡️ Current Status
+
+- **Phase 4 - Steps 1 & 2 Complete:** The interactive palette and dynamic view settings features are fully implemented, stable, and verified.
+- **Next Step:** Proceed with **Phase 4, Step 3: Layout Transitions**.
+
+### Step 3: Layout Transitions
+- **Status:** Complete
+- **Details:** The CSS transition on the `.node-wrapper` class was updated to a 600ms `cubic-bezier` curve. This creates a a smoother, more polished animation when the user switches between the "Linear" and "Zig-Zag" layouts.
+
+---
+### Step 3.5: Add Full Node Hierarchy UI (Events & Scenes)
+- **Status:** Complete
+- **Details:** This step was expanded significantly to implement the full UI for creating and managing the timeline hierarchy, including the tracks between nodes and core editing features.
+  - **Period and Event Tracks:** A robust track system was implemented to visually connect Periods and Events. This includes a `+` button on each track segment to allow for in-sequence insertion of new nodes. The logic was refined multiple times to ensure correct button placement in all layouts.
+  - **Append Event Logic:** The UI for adding events was enhanced. The "Add Event" `+` button now intelligently appears either on an empty Period or on the last Event within a Period, creating a consistent "Append" workflow.
+  - **Delete Node Functionality:** A "Delete" button was added to all nodes (except bookends). It uses a confirmation modal and supports cascading deletion (deleting a Period also deletes its child Events). The track system automatically "heals" its connections when a node is removed.
+  - **Layout & UX Refinements:**
+    - Period node widths were increased to make them more visually distinct.
+    - Event and Scene nodes were centered relative to their parents in both `Linear` and `ZigZag` layouts to improve visual hierarchy.
+    - The `clip-path` border for Event nodes was fixed to render correctly on all edges.
+    - Several interaction bugs were fixed, including an overlay issue that blocked editing of Period nodes.
+    - Legacy thread thickness scaling was doubled.
+  - **Major Refactoring:** The `PeriodTrackOverlay` and new `EventTrackOverlay` were refactored into a single, generic `TrackOverlay` component. All data-intensive segment calculations were moved into the `Canvas` "container" component, which now passes the segment data as a prop. This follows a "Container/Presentational" pattern, improving separation of concerns and making future changes to track appearance much easier to implement.
+
+---
+### Step 4: Legacy Focus Mode
+- **Status:** Complete
+- **Details:** Implemented the "Legacy Focus Mode" feature to enhance visualization of specific legacy threads.
+  - **Interactive Legacy List:** The "Legacies" section in the sideboard now displays a list of all unique tags found in the timeline. Users can click a tag to select it, and click again to deselect it. The "Clear Selection" button was removed as clicking a selected tag now deselects it.
+  - **Thread Highlighting:** When a legacy is selected, its corresponding threads on the canvas become more prominent (increased opacity and stroke width). All other legacy threads remain in a "darkened" (lower opacity) state. This "darkened" state is now the default for all threads when no specific legacy is selected.
+  - **Node Dimming:** Nodes that do not contain the currently selected legacy tag are visually dimmed (lower opacity and grayscale filter) to bring focus to the relevant nodes.
+
+---
+## ➡️ Current Status
+
+- **Phase 4 Complete:** All objectives for Phase 4, including all sub-steps (Step 1, Step 2, Step 3, Step 3.5, and Step 4), are now implemented, stable, and verified.
+- **Next Step:** Awaiting new user requirements.

@@ -20,7 +20,13 @@
   font-family: sans-serif;
   text-align: left;
 
-  transition: background-color 0.3s, color 0.3s;
+  transition: background-color 0.3s, color 0.3s, opacity 0.3s, filter 0.3s;
+}
+
+/* Style for nodes that are NOT in focus */
+.dimmed {
+  opacity: 0.2;
+  filter: grayscale(100%);
 }
 
 /* The new inner wrapper for the node's content */
