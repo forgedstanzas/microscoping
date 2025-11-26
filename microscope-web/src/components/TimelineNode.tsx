@@ -112,7 +112,7 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         
         {/* Interaction Buttons */}
         <div className={styles['button-group']}>
-          <button className={styles.button} onClick={handleToggleTone}>Tone</button>
+          <button className={styles.button} onClick={handleToggleTone}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
           <button className={styles.button} onClick={handleToggleGhost}>Ghost</button>
           {!node.isBookend && (
             <button className={styles.button} onClick={handleDelete}>Delete</button>

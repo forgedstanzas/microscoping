@@ -238,6 +238,7 @@ export class NodeService {
     return NodeService.addNode({
       type: 'event',
       title: 'New Event',
+      isGhost: true,
       parentId: parentId,
       tone: newTone,
       order: newOrder,

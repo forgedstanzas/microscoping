@@ -19,7 +19,7 @@
   --canvas-bg: #ebebeb;
   --border-color: rgba(0, 0, 0, 0.2);
   --tone-light: #eee; /* Very light gray, visually lighter */
-  --tone-dark: #cccccc; /* Dark gray */
+  --tone-dark: #000000; /* Dark gray */
   --ghost-border: rgba(0, 0, 0, 0.4);
   --ghost-content-bg: #cccccc;
   --ghost-content-bg-image: repeating-linear-gradient(
@@ -59,7 +59,7 @@
   --canvas-bg: #242424;
   --border-color: rgba(255, 255, 255, 0.2);
   --tone-light: #eee; /* Very light gray */
-  --tone-dark: #888; /* Medium gray */
+  --tone-dark: #000000; /* Medium gray */
   --ghost-border: rgba(255, 255, 255, 0.4);
   --ghost-content-bg: #444;
   --ghost-content-bg-image: repeating-linear-gradient(

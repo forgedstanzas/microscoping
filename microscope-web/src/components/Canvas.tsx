@@ -73,12 +73,28 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
   useEffect(() => {
     if (nodes.length > 0) {
       let dimensionsToUse: DimensionMap;
-      if (dimensions.size === nodes.length) {
+
+      // Check if all nodes currently in the state have been measured.
+      // This is more robust than checking map.size === nodes.length, which fails on deletion.
+      let allNodesMeasured = true;
+      for (const node of nodes) {
+        if (!dimensions.has(node.id)) {
+          allNodesMeasured = false;
+          break;
+        }
+      }
+
+      if (allNodesMeasured) {
+        // Use the existing dimensions map. It might be "dirty" with old nodes,
+        // but the layout functions will only access the keys present in the `nodes` array.
         dimensionsToUse = dimensions;
       } else {
-        const defaultDims = new Map<string, { width: number; height: number }>();
+        // Fallback to default dimensions for any *new* unmeasured nodes.
+        const defaultDims = new Map(dimensions);
         nodes.forEach(node => {
-          defaultDims.set(node.id, { width: layoutConstants?.cardWidth ?? 300, height: 150 });
+          if (!defaultDims.has(node.id)) {
+            defaultDims.set(node.id, { width: layoutConstants?.cardWidth ?? 300, height: 150 });
+          }
         });
         dimensionsToUse = defaultDims;
       }
