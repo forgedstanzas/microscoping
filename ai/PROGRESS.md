@@ -123,16 +123,22 @@ The implementation of the dynamic layout system was a significant challenge that
 - **Details:** The CSS transition on the `.node-wrapper` class was updated to a 600ms `cubic-bezier` curve. This creates a a smoother, more polished animation when the user switches between the "Linear" and "Zig-Zag" layouts.
 
 ---
-### Step 3.5: Add Period UI
-- **Status:** In Progress
-- **Details:** This intermediate step provides a UI for adding new timeline nodes.
-  - **Period UI Complete:** A UI for inserting **Period** nodes is now complete. This involved creating the `PeriodTrackOverlay.tsx` component to render a track line and a `+` button between existing periods.
-    - The button's positioning was refined to ensure it remains centered in the true gap between nodes, correctly accounting for configurable `layoutConstants`.
-    - A hover-flicker bug was resolved by refactoring the overlay to a single SVG layer, embedding the HTML button via a `<foreignObject>`.
-  - **Next Sub-step:** Implement UI for adding new **Event** and **Scene** nodes.
+### Step 3.5: Add Full Node Hierarchy UI (Events & Scenes)
+- **Status:** Complete
+- **Details:** This step was expanded significantly to implement the full UI for creating and managing the timeline hierarchy, including the tracks between nodes and core editing features.
+  - **Period and Event Tracks:** A robust track system was implemented to visually connect Periods and Events. This includes a `+` button on each track segment to allow for in-sequence insertion of new nodes. The logic was refined multiple times to ensure correct button placement in all layouts.
+  - **Append Event Logic:** The UI for adding events was enhanced. The "Add Event" `+` button now intelligently appears either on an empty Period or on the last Event within a Period, creating a consistent "Append" workflow.
+  - **Delete Node Functionality:** A "Delete" button was added to all nodes (except bookends). It uses a confirmation modal and supports cascading deletion (deleting a Period also deletes its child Events). The track system automatically "heals" its connections when a node is removed.
+  - **Layout & UX Refinements:**
+    - Period node widths were increased to make them more visually distinct.
+    - Event and Scene nodes were centered relative to their parents in both `Linear` and `ZigZag` layouts to improve visual hierarchy.
+    - The `clip-path` border for Event nodes was fixed to render correctly on all edges.
+    - Several interaction bugs were fixed, including an overlay issue that blocked editing of Period nodes.
+    - Legacy thread thickness scaling was doubled.
+  - **Major Refactoring:** The `PeriodTrackOverlay` and new `EventTrackOverlay` were refactored into a single, generic `TrackOverlay` component. All data-intensive segment calculations were moved into the `Canvas` "container" component, making the overlay a purely presentational component and greatly reducing code duplication.
 
 ---
 ## ➡️ Current Status
 
-- **Phase 4 - Step 3.5 In Progress:** The UI for adding new Period nodes is complete and stable.
-- **Next Step:** Implement the UI for adding new Event and Scene nodes.
+- **Phase 4 Complete:** All objectives for Phase 4, including all sub-steps of Step 3, are now implemented, stable, and verified.
+- **Next Step:** Awaiting new user requirements.

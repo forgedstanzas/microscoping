@@ -34,6 +34,7 @@ export function calculateLayout(
   const CARD_WIDTH = layoutConstants?.cardWidth ?? 300;
   const GAP_HORIZONTAL = layoutConstants?.gapSize ?? 100; // Using gapSize for horizontal spacing
   const GAP_VERTICAL = layoutConstants?.gapSize ?? 40;   // Using gapSize for vertical spacing
+  const SCENE_INDENTATION = layoutConstants?.gapSize ? layoutConstants.gapSize / 2 : 50;
 
   // 1. Build the tree structure
   const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
@@ -88,6 +89,7 @@ export function calculateLayout(
 
       const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
       let eventLayoutY;
+      const eventX = currentX + (periodDims.width - eventDims.width) / 2; // Center event under period
 
       if (currentPeriodEventLayoutDirection === 'above') {
         eventsAboveCurrentY -= (GAP_VERTICAL + eventDims.height);
@@ -98,7 +100,7 @@ export function calculateLayout(
       }
 
       layoutMap.set(event.id, {
-        x: currentX,
+        x: eventX,
         y: eventLayoutY,
         width: eventDims.width,
         height: eventDims.height,
@@ -110,7 +112,7 @@ export function calculateLayout(
         if (scene.type !== 'scene') return;
         const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
         layoutMap.set(scene.id, {
-          x: currentX,
+          x: eventX + SCENE_INDENTATION, // Indent scene relative to its parent event
           y: sceneYAccumulator,
           width: sceneDims.width,
           height: sceneDims.height,

@@ -103,6 +103,7 @@ export function calculateLayout(
         const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
         const eventGroupHeight = getEventGroupTotalHeight(event); // Total height of event + its scenes
         let eventLayoutY; // Final Y for the event itself
+        const eventX = currentX + (periodDims.width - eventDims.width) / 2; // Center event under period
 
         if (currentPeriodEventLayoutDirection === 'above') {
             currentYAbove -= (eventGroupHeight + GAP_VERTICAL); // Stack upwards from period top
@@ -113,7 +114,7 @@ export function calculateLayout(
         }
 
         layoutMap.set(event.id, {
-            x: currentX,
+            x: eventX,
             y: eventLayoutY,
             width: eventDims.width,
             height: eventDims.height,
@@ -125,7 +126,7 @@ export function calculateLayout(
             if (scene.type !== 'scene') return;
             const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
             layoutMap.set(scene.id, {
-                x: currentX + SCENE_INDENTATION, // Indent scene
+                x: eventX + SCENE_INDENTATION, // Indent scene relative to its parent event
                 y: sceneYAccumulator,
                 width: sceneDims.width,
                 height: sceneDims.height,

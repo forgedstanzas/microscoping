@@ -77,14 +77,33 @@ export class NodeService {
    * @param nodeId - The ID of the node to delete.
    */
   static deleteNode(nodeId: string) {
-    if (nodesMap.has(nodeId)) {
-      ydoc.transact(() => {
-        nodesMap.delete(nodeId);
-      });
-      console.log('NodeService: Deleted node', nodeId);
-    } else {
+    const nodeToDelete = nodesMap.get(nodeId);
+
+    if (!nodeToDelete) {
       console.warn(`NodeService: deleteNode called with non-existent nodeId '${nodeId}'`);
+      return;
     }
+
+    ydoc.transact(() => {
+      // The nodes to be deleted. Start with the target node.
+      const nodesToDeleteIds: string[] = [nodeId];
+
+      // If it's a period, find all its children (events).
+      if (nodeToDelete.type === 'period') {
+        // Collect all children IDs first to avoid issues with map iteration during deletion
+        const childrenIds = Array.from(nodesMap.values())
+          .filter(node => node.parentId === nodeId)
+          .map(node => node.id);
+        nodesToDeleteIds.push(...childrenIds);
+      }
+
+      // Delete all identified nodes.
+      nodesToDeleteIds.forEach(id => {
+        nodesMap.delete(id);
+      });
+
+      console.log('NodeService: Deleted nodes:', nodesToDeleteIds);
+    });
   }
 
   /**
@@ -102,6 +121,21 @@ export class NodeService {
    */
   static getAllNodes(): TimelineNode[] {
     return Array.from(nodesMap.values());
+  }
+
+  /**
+   * Checks if a given node has any child nodes (events).
+   * @param nodeId The ID of the node to check.
+   * @returns True if the node has children, false otherwise.
+   */
+  static hasChildren(nodeId: string): boolean {
+    // Optimization: if it's not a period, it cannot have children
+    const node = nodesMap.get(nodeId);
+    if (!node || node.type !== 'period') {
+        return false;
+    }
+    const allNodes = Array.from(nodesMap.values());
+    return allNodes.some(n => n.parentId === nodeId);
   }
   /**
    * Inserts a new Period node between two existing Period nodes.

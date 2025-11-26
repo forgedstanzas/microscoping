@@ -35,6 +35,15 @@ Adherence to these conventions is paramount for maintaining consistency and avoi
   - **Theme:** `ThemeProvider` and `useSharedTheme`.
   - **Modal Dialogs:** `ModalProvider` and `useModal`.
 
+#### Using `useModal`
+
+The `useModal` hook provides functions to trigger global alert and confirmation dialogs. It is the required way to ask for user confirmation, as it is designed to work with background tabs where native `window.confirm()` would be blocked.
+
+-   **Usage:** `const { showConfirm, showAlert } = useModal();`
+-   **API:**
+    -   `showConfirm(message: string, onConfirm: () => void)`: Displays a confirmation dialog with "Confirm" and "Cancel" buttons. The `onConfirm` callback is executed only if the user clicks "Confirm". The message can include newline characters (`\n`) for formatting.
+    -   `showAlert(message: string)`: Displays a simple alert dialog with an "OK" button.
+
 ### 2.2. Collaborative UX Patterns
 - **One-Time Event Log (for Sharing):** To implement a "share" feature that is resistant to race conditions, an event log pattern is used. The sender pushes a unique, timestamped event object to a `Y.Array`. Receiving clients observe this array, process each new event only once (by tracking its unique ID), and can then act on it (e.g., by prompting the user to accept the shared settings). This avoids the "last write wins" problem of using a simple `Y.Map` key for transient messages.
 - **Custom Modal for Asynchronous Actions:** To handle browser security features that block dialogs (`window.confirm`) from background tabs, a custom modal system was built. When a collaborative event arrives that requires user confirmation, the application shows a non-intrusive notification or state change. The custom modal confirmation is only shown after the user interacts with the UI in that tab, guaranteeing it is user-initiated.
@@ -49,7 +58,26 @@ Adherence to these conventions is paramount for maintaining consistency and avoi
 - **Services vs. Hooks:**
   - **Hooks** (e.g., `useViewSettings`) are used for logic that is stateful and tied to the React component lifecycle. They manage React state (`useState`) and side effects (`useEffect`).
   - **Services** (e.g., `SessionManager`, `ViewSettingsService`) are refactored to be collections of pure, static functions. They contain business logic that is independent of the UI lifecycle. UI-related tasks like showing a confirmation dialog are handled in the component layer, which then calls the service with the final, confirmed data.
+- **Container vs. Presentational Components:** For complex UI elements that are repeated (like the tracks between nodes), the logic for calculating *what* to display is separated from the logic of *how* to display it.
+  - **Container Component (e.g., `Canvas.tsx`):** Responsible for fetching data and running complex calculations/business logic (e.g., calculating track segment coordinates). It holds the "source of truth".
+  - **Presentational Component (e.g., `TrackOverlay.tsx`):** A simpler component that receives data (e.g., an array of segments to draw) as props and is only responsible for rendering the UI. This pattern reduces code duplication and improves maintainability.
 
-## 4. Good Practices / Anti-Patterns to Avoid
+## 4. Key Service APIs
+
+This section documents the public interface of important services.
+
+### 4.1. `NodeService`
+The `NodeService` provides a static API for all CRUD operations on timeline nodes.
+-   `addNode(props)`: Creates and adds a new node.
+-   `updateNode(nodeId, fields)`: Updates one or more fields of an existing node.
+-   `deleteNode(nodeId)`: Deletes a node. **Note:** This implements cascading deletion. If the `nodeId` belongs to a Period, all of its child Events will also be deleted.
+-   `getNode(nodeId)`: Retrieves a single node.
+-   `getAllNodes()`: Retrieves all nodes as an array.
+-   `hasChildren(nodeId)`: Returns `true` if the given `nodeId` (for a Period) has one or more child Events.
+-   `insertPeriodBetween(prevId, nextId)`: Creates a new Period between two existing ones.
+-   `insertEventBetween(prevId, nextId)`: Creates a new Event between a Period/Event and a subsequent Event.
+-   `addEventToPeriod(parentId)`: Appends a new Event to the end of a Period's child list.
+
+## 5. Good Practices / Anti-Patterns to Avoid
 - **Y.js Sync Awareness:** When creating a hook that interacts with Y.js data, always get the `isSynced` flag from the `useYjs` hook. Do not attempt to read from or attach observers to Y.js data structures until `isSynced` is `true`. This prevents race conditions where the hook might attach to a stale data object before the persisted state from IndexedDB is loaded.
 - **Full-Page Layout:** For a full-page app, remove the default Vite/CRA styles from `App.css` and `index.css` (e.g., `max-width`, `padding`, `display: flex`). The `body` and `#root` should be configured to fill the viewport (`height: 100vh`, `overflow: hidden`).

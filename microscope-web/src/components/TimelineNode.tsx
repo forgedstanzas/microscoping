@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { useRef, memo, useCallback, useMemo } from 'react';
 import { HighlightableText } from './HighlightableText';
 import { debounce } from '../utils/debounce';
+import { useModal } from '../context/ModalContext'; // Import useModal
 
 interface TimelineNodeProps {
   node: TimelineNode;
@@ -14,6 +15,7 @@ interface TimelineNodeProps {
 
 function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: TimelineNodeProps) {
   const titleRef = useRef<HTMLDivElement>(null);
+  const { showConfirm } = useModal(); // Correctly use the modal hook
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';
@@ -22,6 +24,23 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: Tim
 
   const handleToggleGhost = () => {
     NodeService.updateNode(node.id, { isGhost: !node.isGhost });
+  };
+
+  const handleDelete = () => {
+    // Determine if confirmation should be skipped
+    const hasChildren = NodeService.hasChildren(node.id);
+    const shouldSkipConfirm = node.description.trim() === '' && !hasChildren;
+
+    if (shouldSkipConfirm) {
+      NodeService.deleteNode(node.id);
+    } else {
+      // Format the message for the simpler showConfirm API
+      const title = `Delete '${node.title}'?`;
+      const body = "Are you sure? " + (hasChildren ? "All child events will also be deleted. " : "") + "This cannot be undone.";
+      const message = `${title}\n\n${body}`;
+
+      showConfirm(message, () => NodeService.deleteNode(node.id));
+    }
   };
 
   const handleTitleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
@@ -88,8 +107,11 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: Tim
         
         {/* Interaction Buttons */}
         <div className={styles['button-group']}>
-          <button className={styles.button} onClick={handleToggleTone}>Toggle Tone</button>
-          <button className={styles.button} onClick={handleToggleGhost}>Toggle Ghost</button>
+          <button className={styles.button} onClick={handleToggleTone}>Tone</button>
+          <button className={styles.button} onClick={handleToggleGhost}>Ghost</button>
+          {!node.isBookend && (
+            <button className={styles.button} onClick={handleDelete}>Delete</button>
+          )}
         </div>
       </div>
     </div>

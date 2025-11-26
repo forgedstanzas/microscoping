@@ -11,6 +11,7 @@ import './Canvas.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ViewSettings } from '../types/settings';
 import type { TimelineNode } from '../types/timeline';
+import clsx from 'clsx';
 
 interface CanvasProps {
   layoutMode: 'zigzag' | 'linear';
@@ -110,9 +111,11 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
       const cy1 = prevLayout.y + prevLayout.height / 2;
       const cx2 = nextLayout.x + nextLayout.width / 2;
       const cy2 = nextLayout.y + nextLayout.height / 2;
-      const rightEdgeOfPrevNode = prevLayout.x + prevLayout.width;
-      const buttonX = rightEdgeOfPrevNode + totalGap / 2;
-      const t = (buttonX - cx1) / (cx2 - cx1);
+      
+      // Robustly find the midpoint of the visible gap between the two nodes
+      const buttonX = ( (prevLayout.x + prevLayout.width) + nextLayout.x ) / 2;
+      
+      const t = isNaN(cx2 - cx1) || (cx2 - cx1) === 0 ? 0 : (buttonX - cx1) / (cx2 - cx1);
       const buttonY = cy1 + t * (cy2 - cy1);
       segments.push({
         id: `${prevPeriod.id}-${nextPeriod.id}`,
@@ -249,7 +252,7 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
             return (
               <div
                 key={node.id}
-                className='node-wrapper'
+                className={clsx('node-wrapper', node.type === 'period' && 'period-wrapper')}
                 style={style}
                 ref={measureRef}
                 data-node-id={node.id}

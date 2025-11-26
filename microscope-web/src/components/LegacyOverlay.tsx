@@ -17,7 +17,7 @@ interface ThreadEdge {
 
 const THREAD_CONFIG = {
   baseThickness: 2,
-  factor: 1.5,
+  factor: 3,
   maxThickness: 12,
   slotSize: 15, // Vertical pixels per slot on the node's edge
 };
