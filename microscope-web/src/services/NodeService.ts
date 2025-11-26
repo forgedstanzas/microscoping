@@ -131,6 +131,48 @@ export class NodeService {
       tone: newTone,
     });
   }
+
+  /**
+   * Adds a new Event node as a child of a specified Period node.
+   * @param parentId - The ID of the parent Period node.
+   * @returns The newly created TimelineNode, or undefined if creation fails.
+   */
+  static addEventToPeriod(parentId: string): TimelineNode | undefined {
+    const parentPeriod = nodesMap.get(parentId);
+
+    if (!parentPeriod || parentPeriod.type !== 'period') {
+      console.error(`NodeService: Cannot add event to non-existent or non-period parent '${parentId}'.`);
+      return undefined;
+    }
+
+    // Find all existing events for this parent, sorted by order
+    const existingEvents = Array.from(nodesMap.values())
+      .filter(node => node.type === 'event' && node.parentId === parentId)
+      .sort((a, b) => a.order - b.order);
+
+    let newOrder: number;
+    if (existingEvents.length > 0) {
+      // Place after the last existing event for this parent
+      const lastEventOrder = existingEvents[existingEvents.length - 1].order;
+      // The conceptual "next boundary" for children of this period is parent.order + 1.
+      const nextBoundary = parentPeriod.order + 1;
+      newOrder = (lastEventOrder + nextBoundary) / 2;
+    } else {
+      // First event for this period, place it midway between parent.order and parent.order + 1.
+      newOrder = parentPeriod.order + 0.5;
+    }
+    
+    // New event inherits tone from parent period
+    const newTone = parentPeriod.tone; 
+
+    return NodeService.addNode({
+      type: 'event',
+      title: 'New Event',
+      parentId: parentId,
+      tone: newTone,
+      order: newOrder,
+    });
+  }
 }
 
 // --- Background Tag Synchronization ---

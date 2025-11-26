@@ -5,6 +5,7 @@ import { calculateLayout as linearCalculateLayout, type DimensionMap, type Layou
 import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter'; // Import ZigZag
 import { LegacyOverlay } from './LegacyOverlay';
 import { PeriodTrackOverlay } from './PeriodTrackOverlay'; // Import PeriodTrackOverlay
+import { EventButtonOverlay } from './EventButtonOverlay'; // Import EventButtonOverlay
 import './Canvas.css';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ViewSettings } from '../types/settings';
@@ -23,6 +24,15 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
   const [layout, setLayout] = useState<LayoutMap>(new Map());
   const [dimensions, setDimensions] = useState<DimensionMap>(new Map());
   const [initialY, setInitialY] = useState(window.innerHeight / 2); // Center Y for ZigZag
+  const [nodeBorderWidth, setNodeBorderWidth] = useState(8); // Default value
+
+  // Read the node border width from CSS variables when the component mounts
+  useEffect(() => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue('--node-border-width');
+    if (value) {
+      setNodeBorderWidth(parseInt(value, 10));
+    }
+  }, []);
 
   // Update initialY on window resize
   useEffect(() => {
@@ -147,6 +157,13 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
           
           <LegacyOverlay nodes={nodes} layout={layout} />
           <PeriodTrackOverlay nodes={nodes} layout={layout} layoutConstants={layoutConstants} />
+          <EventButtonOverlay
+            nodes={nodes}
+            layout={layout}
+            layoutConstants={layoutConstants}
+            layoutMode={layoutMode}
+            nodeBorderWidth={nodeBorderWidth} // Pass the new prop
+          />
 
           {nodes.map(node => {
             const nodeLayout = layout.get(node.id);

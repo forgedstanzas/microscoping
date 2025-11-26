@@ -13,13 +13,22 @@
   -moz-osx-font-smoothing: grayscale;
 
   /* Theme variables from plan (Light) */
+  --node-border-width: 8px;
   --node-bg: #ffffff;
   --node-text: #000000;
   --canvas-bg: #ebebeb;
   --border-color: rgba(0, 0, 0, 0.2);
   --tone-light: #eee; /* Very light gray, visually lighter */
-  --tone-dark: #333333; /* Dark gray */
+  --tone-dark: #cccccc; /* Dark gray */
   --ghost-border: rgba(0, 0, 0, 0.4);
+  --ghost-content-bg: #cccccc;
+  --ghost-content-bg-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.03) 10px,
+    rgba(0, 0, 0, 0.03) 20px
+  );
 
   /* New UI component variables (Light) */
   --ui-bg: #f0f0f0;
@@ -52,6 +61,14 @@
   --tone-light: #eee; /* Very light gray */
   --tone-dark: #888; /* Medium gray */
   --ghost-border: rgba(255, 255, 255, 0.4);
+  --ghost-content-bg: #444;
+  --ghost-content-bg-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.03) 10px,
+    rgba(255, 255, 255, 0.03) 20px
+  );
   
   /* New UI component variables (Dark) */
   --ui-bg: #333;

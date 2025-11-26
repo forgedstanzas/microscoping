@@ -56,38 +56,41 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords }: Tim
         'non-pannable-node', // Marker class to prevent pan/zoom on nodes
         styles.node,
         styles[node.tone],
-        { [styles.ghost]: node.isGhost }
+        { [styles.ghost]: node.isGhost },
+        { [styles.event]: node.type === 'event' }
       )}
       // Add a data attribute for e2e testing or styling if needed
       data-node-id={node.id}
     >
-      {/* SVG Anchors */}
-      <div className={clsx(styles.anchor, styles.top, styles.left)} data-anchor="top-left"></div>
-      <div className={clsx(styles.anchor, styles.top, styles.right)} data-anchor="top-right"></div>
-      <div className={clsx(styles.anchor, styles.bottom, styles.left)} data-anchor="bottom-left"></div>
-      <div className={clsx(styles.anchor, styles.bottom, styles.right)} data-anchor="bottom-right"></div>
+      <div className={styles.contentWrapper}>
+        {/* SVG Anchors */}
+        <div className={clsx(styles.anchor, styles.top, styles.left)} data-anchor="top-left"></div>
+        <div className={clsx(styles.anchor, styles.top, styles.right)} data-anchor="top-right"></div>
+        <div className={clsx(styles.anchor, styles.bottom, styles.left)} data-anchor="bottom-left"></div>
+        <div className={clsx(styles.anchor, styles.bottom, styles.right)} data-anchor="bottom-right"></div>
 
-      <div
-        ref={titleRef}
-        className={styles.title}
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={handleTitleBlur}
-        dangerouslySetInnerHTML={{ __html: node.title }}
-      />
-      
-      <HighlightableText
-        value={node.description}
-        onChange={updateDescription}
-        onBlur={handleDescriptionBlur}
-        affirmedWords={affirmedWords}
-        bannedWords={bannedWords}
-      />
-      
-      {/* Interaction Buttons */}
-      <div className={styles['button-group']}>
-        <button className={styles.button} onClick={handleToggleTone}>Toggle Tone</button>
-        <button className={styles.button} onClick={handleToggleGhost}>Toggle Ghost</button>
+        <div
+          ref={titleRef}
+          className={styles.title}
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleTitleBlur}
+          dangerouslySetInnerHTML={{ __html: node.title }}
+        />
+        
+        <HighlightableText
+          value={node.description}
+          onChange={updateDescription}
+          onBlur={handleDescriptionBlur}
+          affirmedWords={affirmedWords}
+          bannedWords={bannedWords}
+        />
+        
+        {/* Interaction Buttons */}
+        <div className={styles['button-group']}>
+          <button className={styles.button} onClick={handleToggleTone}>Toggle Tone</button>
+          <button className={styles.button} onClick={handleToggleGhost}>Toggle Ghost</button>
+        </div>
       </div>
     </div>
   );

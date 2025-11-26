@@ -73,67 +73,66 @@ export function calculateLayout(
       height: periodDims.height,
     });
 
-    // Stacking for children (Events/Scenes)
-    let childY = periodY; // Start stacking from the period's Y position
-    const periodMidHeight = periodDims.height / 2;
+    // Determine the event layout direction for this specific period
+    const currentPeriodEventLayoutDirection =
+      period.tone === 'light'
+        ? layoutConstants?.eventLayoutLightPeriod ?? 'above' // Default for zigzag light is 'above'
+        : layoutConstants?.eventLayoutDarkPeriod ?? 'below'; // Default for zigzag dark is 'below'
 
-    if (period.tone === 'light') {
-      // Light Periods: Children stack upwards (-Y direction)
-      childY -= periodMidHeight + GAP_VERTICAL; // Start above period
-      
-      period.children.forEach(event => {
-        const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
-        childY -= eventDims.height; // Subtract height first for upwards growth
-        layoutMap.set(event.id, {
-          x: currentX,
-          y: childY,
-          width: eventDims.width,
-          height: eventDims.height,
-        });
-        
-        // Handle Scenes nested under Events (also stack upwards)
-        let sceneY = childY - GAP_VERTICAL; // Start above event
-        event.children.forEach(scene => {
-          const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
-          sceneY -= sceneDims.height; // Subtract height first for upwards growth
-          layoutMap.set(scene.id, {
-            x: currentX + SCENE_INDENTATION, // Indent scene
-            y: sceneY,
-            width: sceneDims.width,
-            height: sceneDims.height,
-          });
-          sceneY -= GAP_VERTICAL; // Space between scenes
-        });
-        childY = sceneY; // Continue stacking from the last scene's Y
-        childY -= GAP_VERTICAL; // Space between events
-      });
-    } else {
-      // Dark Periods: Children stack downwards (+Y direction)
-      childY += periodMidHeight + GAP_VERTICAL; // Start below period
-      
-      period.children.forEach(event => {
-        const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
-        layoutMap.set(event.id, {
-          x: currentX,
-          y: childY,
-          width: eventDims.width,
-          height: eventDims.height,
-        });
-        childY += eventDims.height + GAP_VERTICAL; // Add height for downwards growth
+    // Define accumulators for events and scenes, relative to the period's frame
+    let currentYAbove = 0; // Starts at 0 (top of period) and goes negative
+    let currentYBelow = periodDims.height; // Starts at period's bottom and goes positive
 
-        // Handle Scenes nested under Events (also stack downwards)
-        event.children.forEach(scene => {
-          const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
-          layoutMap.set(scene.id, {
-            x: currentX + SCENE_INDENTATION, // Indent scene
-            y: childY,
-            width: sceneDims.width,
-            height: sceneDims.height,
-          });
-          childY += sceneDims.height + GAP_VERTICAL; // Space between scenes
+    // Helper to calculate event group (event + scenes) height
+    const getEventGroupTotalHeight = (eventNode: NodeWithChildren): number => {
+        let height = (dimensions.get(eventNode.id) || { width: CARD_WIDTH, height: 150 }).height;
+        eventNode.children.forEach(sceneNode => {
+            if (sceneNode.type === 'scene') {
+                height += GAP_VERTICAL + (dimensions.get(sceneNode.id) || { width: CARD_WIDTH, height: 150 }).height;
+            }
         });
-      });
-    }
+        return height;
+    };
+
+
+    // Layout Events and their nested Scenes
+    // Filter out only Event type children for this section.
+    const events = period.children.filter(child => child.type === 'event');
+
+    events.forEach(event => {
+        const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
+        const eventGroupHeight = getEventGroupTotalHeight(event); // Total height of event + its scenes
+        let eventLayoutY; // Final Y for the event itself
+
+        if (currentPeriodEventLayoutDirection === 'above') {
+            currentYAbove -= (eventGroupHeight + GAP_VERTICAL); // Stack upwards from period top
+            eventLayoutY = periodY + currentYAbove; // Event Y relative to canvas, accounting for period's offset
+        } else { // 'below'
+            eventLayoutY = periodY + currentYBelow + GAP_VERTICAL; // Stack downwards from period bottom
+            currentYBelow += (eventGroupHeight + GAP_VERTICAL); // Advance accumulator
+        }
+
+        layoutMap.set(event.id, {
+            x: currentX,
+            y: eventLayoutY,
+            width: eventDims.width,
+            height: eventDims.height,
+        });
+
+        // Layout Scenes nested under this Event (always below their parent event)
+        let sceneYAccumulator = eventLayoutY + eventDims.height + GAP_VERTICAL;
+        event.children.forEach(scene => {
+            if (scene.type !== 'scene') return;
+            const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
+            layoutMap.set(scene.id, {
+                x: currentX + SCENE_INDENTATION, // Indent scene
+                y: sceneYAccumulator,
+                width: sceneDims.width,
+                height: sceneDims.height,
+            });
+            sceneYAccumulator += sceneDims.height + GAP_VERTICAL;
+        });
+    });
 
     // Advance currentX for the next Period column
     currentX += CARD_WIDTH + GAP_HORIZONTAL + 34; // Add 34px horizontal margin

@@ -82,6 +82,23 @@ export const PeriodTrackOverlay: React.FC<PeriodTrackOverlayProps> = ({ nodes, l
               className={styles.trackLine}
               style={{ opacity: isHovered ? 1 : 0.5 }}
             />
+
+            {/* Endpoints for the track line */}
+            <circle
+              cx={segment.line.x1}
+              cy={segment.line.y1}
+              r="6"
+              className={styles.trackEndpoint}
+              style={{ opacity: isHovered ? 1 : 0.5 }}
+            />
+            <circle
+              cx={segment.line.x2}
+              cy={segment.line.y2}
+              r="6"
+              className={styles.trackEndpoint}
+              style={{ opacity: isHovered ? 1 : 0.5 }}
+            />
+
             {/* An invisible, thicker line for easier hover detection */}
             <line
               x1={segment.line.x1} y1={segment.line.y1}

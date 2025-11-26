@@ -1,66 +1,96 @@
 .node {
-  width: 100%; /* Fill the wrapper */
+  width: 100%;
   height: auto;
-  min-height: 150px; /* Per spec */
-  padding: 1rem;
-  box-sizing: border-box; /* This is the fix! */
+  min-height: 150px;
+  box-sizing: border-box;
+  
+  /* Use CSS Grid to manage the layout of the border and content */
+  display: grid;
+  
+  /* This padding creates the space for the border. The background of this element IS the border. */
+  padding: var(--node-border-width); 
+  
+  border: none;
+  border-radius: 8px;
+  
+  /* The background color of this element IS the border */
+  /* It is set by the .light or .dark class */
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: sans-serif;
+  text-align: left;
+
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* The new inner wrapper for the node's content */
+.contentWrapper {
+  /* Place the content wrapper into the grid cell defined by the parent's padding */
+  grid-area: 1 / 1;
+
+  padding: 1rem; /* The original padding for the content */
+  box-sizing: border-box;
   
   background-color: var(--node-bg, #ffffff);
   color: var(--node-text, #000000);
   
-  border-radius: 8px;
-  border: 8px solid transparent; /* Base border, color will be set by tone */
+  /* Use a slightly smaller radius for the inner 'content' part */
+  border-radius: 4px;
   
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-family: sans-serif;
-  text-align: left;
-  
-  /* Smooth transitions for movement and visual state changes */
-  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
 .title {
   font-size: 1.2rem;
   font-weight: 600;
-  padding: 0.25rem; /* Add padding for editing */
+  padding: 0.25rem;
   text-align: center;
 }
 
 /* --- Tone Styles --- */
-
+/* These now set the BACKGROUND of the .node, which serves as the border */
 .light {
-  border-color: var(--tone-light);
+  background-color: var(--tone-light);
 }
 
 .dark {
-  border-color: var(--tone-dark);
-  /* "Hash" effect from the spec */
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(0, 0, 0, 0.03) 10px,
-    rgba(0, 0, 0, 0.03) 20px
-  );
+  background-color: var(--tone-dark);
 }
 
+/* Hash effect is now applied to ghosted nodes */
+
 /* --- Ghost Style --- */
+/* Ghost style now uses a dotted outline, and the content wrapper gets a special background */
 .ghost {
-  border-width: 8px;
-  border-style: dotted;
-  border-color: var(--ghost-border);
-  backdrop-filter: blur(4px);
-  /* Don't set a background color here; let the blur work on what's behind it */
+  background-color: transparent !important; /* Override tone background */
+}
+
+.ghost .contentWrapper {
+  background-color: var(--ghost-content-bg);
+  background-image: var(--ghost-content-bg-image);
+  opacity: 0.8;
+}
+
+/* --- Event Style --- */
+.event {
+  min-height: 100px;
+  /* Use a larger, 4x cutout as requested */
+  clip-path: polygon(40px 0, calc(100% - 40px) 0, 100% 40px, 100% 100%, 0 100%, 0 40px);
+  border-radius: 0; /* Not needed with clip-path */
+}
+
+/* The inner content of an event also needs to be clipped */
+.event .contentWrapper {
+  clip-path: polygon(40px 0, calc(100% - 40px) 0, 100% 40px, 100% 100%, 0 100%, 0 40px);
+  border-radius: 0;
 }
 
 /* --- Button Styles --- */
 
 .button-group {
-  margin-top: auto; /* Pushes buttons to the bottom */
+  margin-top: auto;
   display: flex;
   gap: 8px;
   padding-top: 0.5rem;
@@ -93,7 +123,7 @@
   width: 1px;
   height: 1px;
   background-color: transparent; /* Invisible */
-  pointer-events: none; /* Don't interfere with mouse events */
+  pointer-events: none;
 }
 
 .left {
@@ -111,3 +141,5 @@
 .bottom {
   bottom: 0;
 }
+
+

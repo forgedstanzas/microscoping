@@ -67,37 +67,62 @@ export function calculateLayout(
     const periodDims = dimensions.get(period.id) || { width: CARD_WIDTH, height: 150 };
     layoutMap.set(period.id, {
       x: currentX,
-      y: 0,
+      y: 0, // Periods always start at Y=0 in linear layout
       width: periodDims.width,
       height: periodDims.height,
     });
 
-    let childY = periodDims.height + GAP_VERTICAL;
+    // Determine the event layout direction for this specific period
+    const currentPeriodEventLayoutDirection =
+      period.tone === 'light'
+        ? layoutConstants?.eventLayoutLightPeriod ?? 'below' // Default for linear light is 'below'
+        : layoutConstants?.eventLayoutDarkPeriod ?? 'below'; // Default for linear dark is 'below'
 
+    // Accumulators for events and scenes relative to the period
+    let eventsAboveCurrentY = 0; // Tracks the lowest point of content stacked above the period (most negative Y)
+    let eventsBelowCurrentY = periodDims.height; // Tracks the highest point of content stacked below the period (most positive Y)
+
+    // Layout Events and their nested Scenes
     period.children.forEach(event => {
+      if (event.type !== 'event') return; // Only process events for now
+
       const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
+      let eventLayoutY;
+
+      if (currentPeriodEventLayoutDirection === 'above') {
+        eventsAboveCurrentY -= (GAP_VERTICAL + eventDims.height);
+        eventLayoutY = eventsAboveCurrentY;
+      } else { // 'below'
+        eventLayoutY = eventsBelowCurrentY + GAP_VERTICAL;
+        eventsBelowCurrentY = eventLayoutY + eventDims.height;
+      }
+
       layoutMap.set(event.id, {
-        x: currentX, // Events are in the same column as their Period
-        y: childY,
+        x: currentX,
+        y: eventLayoutY,
         width: eventDims.width,
         height: eventDims.height,
       });
 
-      childY += eventDims.height + GAP_VERTICAL;
-
-      // Handle Scenes nested under Events
-      let sceneY = childY;
+      // Layout Scenes nested under this Event (always below their parent event)
+      let sceneYAccumulator = eventLayoutY + eventDims.height + GAP_VERTICAL;
       event.children.forEach(scene => {
+        if (scene.type !== 'scene') return;
         const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
         layoutMap.set(scene.id, {
-          x: currentX, // Scenes are also in the same column
-          y: sceneY,
+          x: currentX,
+          y: sceneYAccumulator,
           width: sceneDims.width,
           height: sceneDims.height,
         });
-        sceneY += sceneDims.height + GAP_VERTICAL;
+        sceneYAccumulator += sceneDims.height + GAP_VERTICAL;
       });
-      childY = sceneY; // Update childY to continue after the last scene
+
+      // If events were placed below, the scenes will extend further down.
+      // Update eventsBelowCurrentY to account for scenes, if they extend beyond the event itself.
+      if (currentPeriodEventLayoutDirection === 'below' && sceneYAccumulator > eventsBelowCurrentY) {
+        eventsBelowCurrentY = sceneYAccumulator;
+      }
     });
 
     // Advance currentX for the next Period column

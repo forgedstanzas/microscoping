@@ -6,6 +6,8 @@ export interface ViewSettings {
       cardWidth?: number;    // Default 300
       zigzagOffset?: number; // Default 250
       gapSize?: number;      // Default 50
+      eventLayoutLightPeriod?: 'above' | 'below';
+      eventLayoutDarkPeriod?: 'above' | 'below';
     }
   }
 }
