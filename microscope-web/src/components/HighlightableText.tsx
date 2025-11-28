@@ -8,6 +8,7 @@ interface HighlightableTextProps {
   onBlur: (value: string) => void;
   bannedWords: string[]; // New prop
   affirmedWords: string[]; // New prop
+  placeholder?: string;
 }
 
 /**
@@ -47,7 +48,7 @@ function renderPaletteHighlights(text: string, matches: PaletteMatch[]): React.R
   return nodes;
 }
 
-export function HighlightableText({ value, onChange, onBlur, bannedWords, affirmedWords }: HighlightableTextProps) {
+export function HighlightableText({ value, onChange, onBlur, bannedWords, affirmedWords, placeholder }: HighlightableTextProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   const highlightedContent = useMemo(() => {
@@ -77,6 +78,7 @@ export function HighlightableText({ value, onChange, onBlur, bannedWords, affirm
         onInput={(e) => onChange(e.currentTarget.innerText)}
         // Suppress React's warning about managing contentEditable content
         suppressContentEditableWarning={true}
+        data-placeholder={placeholder}
       />
     </div>
   );

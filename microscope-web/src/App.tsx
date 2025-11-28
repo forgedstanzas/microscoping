@@ -1,67 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useYjs } from './hooks/useYjs';
-import { NodeService } from './services/NodeService';
+import { useState } from 'react';
 import { Canvas } from './components/Canvas';
 import { Sideboard } from './components/Sideboard';
 import { usePalette } from './hooks/usePalette';
 import { useViewSettings } from './hooks/useViewSettings';
-import { Modal } from './components/Modal'; // Import Modal
+import { useYjsContext } from './context/YjsContext';
 import './App.css';
 
 function App() {
-  // Initialize Y.js and get sync status
-  const { ydoc, isSynced } = useYjs();
-  // Call hooks for shared state once, here in the common ancestor
-  const paletteState = usePalette();
-  const viewSettings = useViewSettings();
+  // All Yjs logic is now in YjsProvider.
+  // App now consumes the context to get what it needs.
+  const { ydoc } = useYjsContext();
 
-  // State for layout mode, lifted to App
-  const [layoutMode, setLayoutMode] = useState<'zigzag' | 'linear'>('zigzag');
-  // State for selected legacy, for focus mode
-  const [selectedLegacy, setSelectedLegacy] = useState<string | null>(null);
+  // These hooks now get the ydoc from the context.
+  // Note: These hooks will be called with a null ydoc on initial renders
+  // before the provider is ready, so they need to be resilient.
+  const paletteState = usePalette(ydoc);
+  const viewSettings = useViewSettings(ydoc);
 
-  useEffect(() => {
-    // Only run this logic once when the Y.js document is synced and ready
-    if (isSynced && ydoc) {
-      const nodesMap = ydoc.getMap('nodes');
-      // If no nodes exist, initialize with Start and End periods
-      if (nodesMap.size === 0) {
-        console.log('Initializing Y.js document with Start and End Periods...');
-        NodeService.addNode({
-          type: 'period',
-          title: 'Start Period',
-          isBookend: true,
-          order: 0,
-        });
-        NodeService.addNode({
-          type: 'period',
-          title: 'End Period',
-          isBookend: true,
-          order: 1,
-        });
-      }
-    }
-  }, [isSynced, ydoc]);
-
+  // UI state is now in UIStateProvider.
+  
   return (
     <>
       <Canvas
-        layoutMode={layoutMode}
-        setLayoutMode={setLayoutMode}
         affirmedWords={paletteState.affirmedWords}
         bannedWords={paletteState.bannedWords}
-        layoutConstants={viewSettings.layoutConstants} // Pass layout constants
-        selectedLegacy={selectedLegacy} // Pass selected legacy
+        layoutConstants={viewSettings.layoutConstants}
       />
       <Sideboard
-        layoutMode={layoutMode}
-        setLayoutMode={setLayoutMode}
         palette={paletteState}
-        viewSettings={viewSettings} // Pass all view settings and functions
-        selectedLegacy={selectedLegacy} // Pass selected legacy
-        onLegacySelect={setSelectedLegacy} // Pass setter
+        viewSettings={viewSettings}
       />
-      <Modal />
     </>
   );
 }

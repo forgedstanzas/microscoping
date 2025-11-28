@@ -2,14 +2,19 @@ import React, { useMemo } from 'react';
 import { useNodes } from '../hooks/useNodes';
 import styles from './SideboardLegacies.module.css';
 import clsx from 'clsx';
+import { useYjsContext } from '../context/YjsContext';
+import { useUIState } from '../context/UIStateContext';
 
 interface SideboardLegaciesProps {
-  selectedLegacy: string | null;
-  onLegacySelect: (legacy: string | null) => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (isCollapsed: boolean) => void;
+  isPeelOff: boolean;
 }
 
-export function SideboardLegacies({ selectedLegacy, onLegacySelect }: SideboardLegaciesProps) {
-  const nodes = useNodes();
+export function SideboardLegacies({ isCollapsed, setIsCollapsed, isPeelOff }: SideboardLegaciesProps) {
+  const { ydoc } = useYjsContext();
+  const { selectedLegacy, setSelectedLegacy } = useUIState();
+  const nodes = useNodes(ydoc);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -19,25 +24,34 @@ export function SideboardLegacies({ selectedLegacy, onLegacySelect }: SideboardL
     return Array.from(tagSet).sort();
   }, [nodes]);
 
+  const isCollapsible = !isPeelOff;
+
   return (
     <div>
-      <h3>Legacies</h3>
-      {allTags.length > 0 ? (
+      <h3
+        className={isCollapsible ? styles.collapsibleHeader : ''}
+        onClick={isCollapsible ? () => setIsCollapsed(!isCollapsed) : undefined}
+      >
+        Legacies {isCollapsible && (isCollapsed ? '▶' : '▼')}
+      </h3>
+      {(!isCollapsed || isPeelOff) && (
         <>
-          <ul className={styles.legaciesList}>
-            {allTags.map(tag => (
-              <li
-                key={tag}
-                className={clsx(styles.legacyItem, { [styles.selected]: tag === selectedLegacy })}
-                onClick={() => onLegacySelect(tag === selectedLegacy ? null : tag)}
-              >
-                {tag}
-              </li>
-            ))}
-          </ul>
+          {allTags.length > 0 ? (
+            <ul className={styles.legaciesList}>
+              {allTags.map(tag => (
+                <li
+                  key={tag}
+                  className={clsx(styles.legacyItem, { [styles.selected]: tag === selectedLegacy })}
+                  onClick={() => setSelectedLegacy(tag === selectedLegacy ? null : tag)}
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No legacies found. Add @tags to node descriptions to create them.</p>
+          )}
         </>
-      ) : (
-        <p>No legacies found. Add @tags to node descriptions to create them.</p>
       )}
     </div>
   );

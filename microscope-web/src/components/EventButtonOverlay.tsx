@@ -1,16 +1,17 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import styles from './EventButtonOverlay.module.css'; // New CSS module
-import { NodeService } from '../services/NodeService';
+import styles from './EventButtonOverlay.module.css';
+import NodeService from '../services/NodeService';
 import type { TimelineNode } from '../types/timeline';
-import type { LayoutMap } from '../layout/LinearAdapter'; // Re-use type
+import type { LayoutMap } from '../layout/LinearAdapter';
 import type { ViewSettings } from '../types/settings';
+import { useYjsContext } from '../context/YjsContext';
 
 interface EventButtonOverlayProps {
   nodes: TimelineNode[];
   layout: LayoutMap;
   layoutConstants: ViewSettings['layout']['constants'];
   layoutMode: 'zigzag' | 'linear';
-  nodeBorderWidth: number; // New prop
+  nodeBorderWidth: number;
 }
 
 interface EventButtonPlacement {
@@ -21,6 +22,7 @@ interface EventButtonPlacement {
 }
 
 export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, layout, layoutConstants, layoutMode, nodeBorderWidth }) => {
+  const { services } = useYjsContext();
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null); // Renamed state to hoveredNodeId
 
   const eventButtonPlacements = useMemo(() => {
@@ -79,8 +81,8 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
 
   // Rename handleAddEvent to be more specific if needed, but it calls the correct service function
   const handleAddEvent = useCallback((parentId: string) => {
-    NodeService.addEventToPeriod(parentId);
-  }, []);
+    services.nodeService.addEventToPeriod(parentId);
+  }, [services.nodeService]);
 
   return (
     <svg className={styles.eventButtonSvg} onMouseLeave={() => setHoveredNodeId(null)}> // Renamed state usage

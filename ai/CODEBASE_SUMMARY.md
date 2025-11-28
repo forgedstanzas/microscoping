@@ -1,83 +1,107 @@
-# Codebase Summary for Gemini AI
+# Codebase Summary for AI Development
 
-This document provides a summary of the `microscope-web` codebase, focusing on established conventions, architectural patterns, good practices, and potential security considerations. This information is intended to guide future AI interactions with this repository, ensuring adherence to project standards and efficient development.
+*This document reflects the architecture as of the completion of the major refactoring phase. It is the new source of truth.*
 
-## 1. Established Coding Standards & Conventions
+This summary provides a high-level overview of the `microscope-web` codebase, focusing on the current architectural patterns and established conventions. Adhering to these patterns is critical for efficient and safe development by both human and AI authors.
 
-Adherence to these conventions is paramount for maintaining consistency and avoiding common pitfalls.
+---
 
-### 1.1. TypeScript & Imports
-- **Type-Only Imports:** Always explicitly use the `type` keyword for importing TypeScript types or interfaces. The build toolchain is strict about this, and failure to do so can result in runtime errors.
+## 1. Core Architectural Pattern: Provider/Context
+
+The application's architecture is now centered around a **Provider/Context** model. Global state and services are managed in React Contexts and accessed by components via custom hooks. This pattern eliminates "prop drilling" and decouples components.
+
+The providers are nested in `src/main.tsx` in the following order:
+
+1.  `ThemeProvider`: Manages light/dark theme.
+2.  `ModalProvider`: Provides a global, non-blocking modal/alert system (`useModal`).
+3.  **`YjsProvider`**: The heart of the application. It manages all collaborative state and services.
+4.  **`UIStateProvider`**: Manages global, non-collaborative UI state.
+
+### 1.1. The `YjsProvider` and `useYjsContext`
+
+This is the most critical part of the architecture.
+- **Responsibilities:** The `YjsProvider` (`src/context/YjsContext.tsx`) handles the entire lifecycle of a collaborative session. This includes:
+    - Determining the `roomId` from the URL or the `Lobby`.
+    - Initializing the core `useYjs` hook to get the `Y.Doc` and connection status.
+    - **Instantiating all services** (`NodeService`, `SessionManager`) and scoping them to the current `ydoc`.
+    - Handling all top-level session logic (e.g., creating bookend nodes, host election, saving to recent sessions).
+- **Access:** Components **must** access all Y.js-related state and services through the `useYjsContext()` hook.
+- **Example:**
   ```typescript
-  // Correct
-  import type { MyType } from './my-file';
-  import { myValue, type MyOtherType } from './my-file';
+  import { useYjsContext } from '../context/YjsContext';
+
+  function MyComponent() {
+    const { ydoc, services, myPeerId, peers } = useYjsContext();
+    // ... use services.nodeService or other context values
+  }
   ```
-- **Strict Typing:** Favor explicit typing where beneficial, but leverage TypeScript's inference where appropriate. Avoid `any` unless absolutely necessary and justified.
 
-### 1.2. Styling with CSS Modules
-- **Component-Scoped Styles:** All component-specific styling is encapsulated in co-located CSS Module files (e.g., `MyComponent.tsx` and `MyComponent.module.css`).
-- **Global Theme Variables:** All theme-dependent values (colors, backgrounds) are defined as CSS variables in `src/index.css` under the `:root` (light theme) and `[data-theme="dark"]` selectors.
-- **Chained UI Variables:** To allow for both global and specific theming of UI elements, a "chained" variable pattern is used. A global variable (e.g., `--ui-bg`) sets a default for a category of components, and specific variables (e.g., `--button-bg`) use the global variable as their own default (`--button-bg: var(--ui-bg);`). This allows a user's settings file to override either the general `--ui-bg` or the specific `--button-bg`.
-- **Protected Modal Variables:** The custom modal dialog has its own set of non-chained variables (e.g., `--modal-bg`) to ensure it is immune to custom theme overrides and always remains readable.
+### 1.2. The `UIStateProvider` and `useUIState`
+- **Responsibilities:** Manages global UI state that is **not** collaborative and does not need to be saved in the Y.js document. This includes state like the current layout mode or focus mode.
+- **Access:** Components access this state via the `useUIState()` hook.
 
-### 1.3. React Best Practices
-- **Memoization:** Use `React.memo` for components that are expensive to render, especially if they are part of a list and their parent re-renders frequently.
-- **`useCallback` / `useMemo`:** Utilize these hooks for optimizing expensive computations or preventing unnecessary re-renders due to referential inequality of functions/objects passed as props to memoized children.
-- **`contentEditable`:** Be extremely cautious when mixing `contentEditable` with React's rendering lifecycle. Avoid programmatically setting `innerText` on a focused element. Use `useEffect` with `document.activeElement` checks to sync external state only when the element is not being actively edited by the user.
+---
 
-## 2. Architectural Patterns & Core Technologies
+## 2. State Management Strategy
 
-### 2.1. State Management
-- **Primary State (Y.js):** All core application data that requires persistence and collaboration (e.g., Timeline Nodes, Palette word lists) is stored in a singleton Y.js document (`ydoc`). Logic is encapsulated in custom hooks (e.g., `useNodes`, `usePalette`) that subscribe to changes in Y.js data structures and update React state.
-- **Global UI State ("Lift State Up"):** Non-collaborative, session-specific global state (e.g., theme, layout constants, palette state) is managed by custom hooks called a single time in the root `App.tsx` component. The resulting state and dispatch functions are then passed down to child components via props. This ensures a single source of truth for UI state and prevents synchronization issues between different parts of the component tree.
-- **Global Context Providers:** For state that needs to be accessed by deeply nested components without excessive prop-drilling, a React Context is used. This pattern is implemented for:
-  - **Theme:** `ThemeProvider` and `useSharedTheme`.
-  - **Modal Dialogs:** `ModalProvider` and `useModal`.
+The application now has a clear, three-tiered state management strategy.
 
-#### Using `useModal`
+1.  **Collaborative State (Y.js):** All data that must be shared between users and persisted is stored in the `Y.Doc`. This is managed exclusively within `YjsProvider`.
+2.  **Global UI State (React Context):** Shared, non-collaborative UI state is managed by `UIStateProvider`.
+3.  **Local Component State (`useState`):** State that is local to a single component and doesn't affect others (e.g., `isCollapsed` for a dropdown) is managed with standard `useState` or `useRef`.
 
-The `useModal` hook provides functions to trigger global alert and confirmation dialogs. It is the required way to ask for user confirmation, as it is designed to work with background tabs where native `window.confirm()` would be blocked.
+---
 
--   **Usage:** `const { showConfirm, showAlert } = useModal();`
--   **API:**
-    -   `showConfirm(message: string, onConfirm: () => void)`: Displays a confirmation dialog with "Confirm" and "Cancel" buttons. The `onConfirm` callback is executed only if the user clicks "Confirm". The message can include newline characters (`\n`) for formatting.
-    -   `showAlert(message: string)`: Displays a simple alert dialog with an "OK" button.
+## 3. Service Layer and Data Access
 
-### 2.2. Collaborative UX Patterns
-- **One-Time Event Log (for Sharing):** To implement a "share" feature that is resistant to race conditions, an event log pattern is used. The sender pushes a unique, timestamped event object to a `Y.Array`. Receiving clients observe this array, process each new event only once (by tracking its unique ID), and can then act on it (e.g., by prompting the user to accept the shared settings). This avoids the "last write wins" problem of using a simple `Y.Map` key for transient messages.
-- **Custom Modal for Asynchronous Actions:** To handle browser security features that block dialogs (`window.confirm`) from background tabs, a custom modal system was built. When a collaborative event arrives that requires user confirmation, the application shows a non-intrusive notification or state change. The custom modal confirmation is only shown after the user interacts with the UI in that tab, guaranteeing it is user-initiated.
+### 3.1. Instantiated, Context-Aware Services
+- **Pattern:** Services like `NodeService` and `SessionManager` are now **classes**, not collections of static functions.
+- **Lifecycle:** They are instantiated **once** inside `YjsProvider` when the `ydoc` becomes available.
+- **Access:** Service instances are provided through `YjsContext` and **must** be accessed via `useYjsContext().services`.
+- **Example:**
+  ```typescript
+  const { services } = useYjsContext();
+  services.nodeService.addNode({ type: 'period', ... });
+  ```
 
-### 2.3. Dynamic & Responsive Layout
-- **"Measure-Then-Render" for Dynamic Content:** For complex layouts where container size depends on dynamic children (like the Sideboard's "Peel-Off" logic), a two-phase pattern is used:
-  1.  **Measure Pass:** All child components are rendered into a hidden, off-screen container (`visibility: hidden`, `position: absolute`). `useEffect` and `useRef` are used to measure the true `offsetHeight` of each child.
-  2.  **Display Pass:** The measured heights are stored in state. A `useMemo` hook then uses these precise measurements to accurately calculate the final layout (e.g., how many tabs are needed). The component re-renders, showing only the correctly laid-out components.
-- **Fixed-Position UI Elements:** Top-level UI elements like the `Sideboard` use `position: fixed` to ensure they are pinned to the viewport and do not scroll with the main canvas content. The root `body` has `overflow: hidden` to prevent page-level scrollbars.
+### 3.2. Strongly-Typed Metadata (`meta` map)
+- **Schema:** The structure of the global `meta` map is defined by the `MetaMapSchema` interface and the `META_KEYS` constants in `src/types/meta.ts`.
+- **Reading Data (Reactive):** To read data from the `meta` map in a UI component, **use the `useMeta()` hook**. This hook provides a reactive, strongly-typed JavaScript object with the latest metadata.
+  ```typescript
+  import { useMeta } from '../hooks/useMeta';
+  const { historyTitle, hostId } = useMeta();
+  ```
+- **Writing Data:** To write data to the `meta` map, use the specific, typed setter methods on the `nodeService` instance.
+  ```typescript
+  const { services } = useYjsContext();
+  services.nodeService.setHistoryTitle('A New Saga');
+  ```
 
-## 3. Separation of Concerns
-- **Services vs. Hooks:**
-  - **Hooks** (e.g., `useViewSettings`) are used for logic that is stateful and tied to the React component lifecycle. They manage React state (`useState`) and side effects (`useEffect`).
-  - **Services** (e.g., `SessionManager`, `ViewSettingsService`) are refactored to be collections of pure, static functions. They contain business logic that is independent of the UI lifecycle. UI-related tasks like showing a confirmation dialog are handled in the component layer, which then calls the service with the final, confirmed data.
-- **Container vs. Presentational Components:** For complex UI elements that are repeated (like the tracks between nodes), the logic for calculating *what* to display is separated from the logic of *how* to display it.
-  - **Container Component (e.g., `Canvas.tsx`):** Responsible for fetching data and running complex calculations/business logic (e.g., calculating track segment coordinates). It holds the "source of truth".
-  - **Presentational Component (e.g., `TrackOverlay.tsx`):** A simpler component that receives data (e.g., an array of segments to draw) as props and is only responsible for rendering the UI. This pattern reduces code duplication and improves maintainability.
+---
 
-## 4. Key Service APIs
+## 4. Key Logic Flows
 
-This section documents the public interface of important services.
+### Application Startup
+1.  `main.tsx` renders all providers, with `<App />` as the child.
+2.  `YjsProvider` takes control. It checks for a `roomId`.
+3.  If no `roomId` exists, it renders the `<Lobby />`.
+4.  If a `roomId` is found (or chosen in the Lobby), `YjsProvider` initializes `useYjs`, creates the service instances, runs startup effects (host election, etc.), and finally renders its `children` (`<App />`).
+5.  `<App />` and its children render, accessing all necessary state and services from the context hooks.
 
-### 4.1. `NodeService`
-The `NodeService` provides a static API for all CRUD operations on timeline nodes.
--   `addNode(props)`: Creates and adds a new node.
--   `updateNode(nodeId, fields)`: Updates one or more fields of an existing node.
--   `deleteNode(nodeId)`: Deletes a node. **Note:** This implements cascading deletion. If the `nodeId` belongs to a Period, all of its child Events will also be deleted.
--   `getNode(nodeId)`: Retrieves a single node.
--   `getAllNodes()`: Retrieves all nodes as an array.
--   `hasChildren(nodeId)`: Returns `true` if the given `nodeId` (for a Period) has one or more child Events.
--   `insertPeriodBetween(prevId, nextId)`: Creates a new Period between two existing ones.
--   `insertEventBetween(prevId, nextId)`: Creates a new Event between a Period/Event and a subsequent Event.
--   `addEventToPeriod(parentId)`: Appends a new Event to the end of a Period's child list.
+### Component Data Interaction (Example)
+**Task:** A button in `MyComponent` needs to update the history title.
+1.  **Get the service:** `const { services } = useYjsContext();`
+2.  **Call the typed setter:** `onClick={() => services.nodeService.setHistoryTitle('New Title')}`
+3.  Separately, a `DisplayComponent` shows the title.
+4.  **Get the typed, reactive data:** `const { historyTitle } = useMeta();`
+5.  **Render it:** `return <h1>{historyTitle}</h1>;`
+The `useMeta` hook ensures `DisplayComponent` automatically re-renders when the title changes.
 
-## 5. Good Practices / Anti-Patterns to Avoid
-- **Y.js Sync Awareness:** When creating a hook that interacts with Y.js data, always get the `isSynced` flag from the `useYjs` hook. Do not attempt to read from or attach observers to Y.js data structures until `isSynced` is `true`. This prevents race conditions where the hook might attach to a stale data object before the persisted state from IndexedDB is loaded.
-- **Full-Page Layout:** For a full-page app, remove the default Vite/CRA styles from `App.css` and `index.css` (e.g., `max-width`, `padding`, `display: flex`). The `body` and `#root` should be configured to fill the viewport (`height: 100vh`, `overflow: hidden`).
+---
+
+## 5. New Conventions & Anti-Patterns to AVOID
+
+-   **DO NOT** pass `ydoc`, `meta`, `peers`, or `services` as props. Components must get this state from the `useYjsContext` or `useMeta` hooks.
+-   **DO NOT** import `NodeService` or `SessionManager` directly into a component to call a method. Get the *instance* from `useYjsContext().services`.
+-   **DO NOT** use `meta.get('some-string')` inside a UI component. Use the `useMeta()` hook to get a reactive, typed object.
+-   **DO** continue to follow existing conventions like **Type-Only Imports** and **CSS Modules**.

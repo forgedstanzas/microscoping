@@ -1,11 +1,11 @@
-import { NodeService } from '../services/NodeService';
 import type { TimelineNode } from '../types/timeline';
 import styles from './TimelineNode.module.css';
 import clsx from 'clsx';
 import { useRef, memo, useCallback, useMemo } from 'react';
 import { HighlightableText } from './HighlightableText';
 import { debounce } from '../utils/debounce';
-import { useModal } from '../context/ModalContext'; // Import useModal
+import { useModal } from '../context/ModalContext';
+import { useYjsContext } from '../context/YjsContext';
 
 interface TimelineNodeProps {
   node: TimelineNode;
@@ -15,79 +15,72 @@ interface TimelineNodeProps {
 }
 
 function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selectedLegacy }: TimelineNodeProps) {
+  const { services } = useYjsContext();
   const titleRef = useRef<HTMLDivElement>(null);
-  const { showConfirm } = useModal(); // Correctly use the modal hook
+  const { showConfirm } = useModal();
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';
-    NodeService.updateNode(node.id, { tone: newTone });
+    services.nodeService.updateNode(node.id, { tone: newTone });
   };
 
   const handleToggleGhost = () => {
-    NodeService.updateNode(node.id, { isGhost: !node.isGhost });
+    services.nodeService.updateNode(node.id, { isGhost: !node.isGhost });
   };
 
   const handleDelete = () => {
-    // Determine if confirmation should be skipped
-    const hasChildren = NodeService.hasChildren(node.id);
-    const shouldSkipConfirm = node.description.trim() === '' && !hasChildren;
+    const hasChildren = services.nodeService.hasChildren(node.id);
+    const shouldSkipConfirm = (node.description || '').trim() === '' && !hasChildren;
 
     if (shouldSkipConfirm) {
-      NodeService.deleteNode(node.id);
+      services.nodeService.deleteNode(node.id);
     } else {
-      // Format the message for the simpler showConfirm API
       const title = `Delete '${node.title}'?`;
       const body = "Are you sure? " + (hasChildren ? "All child events will also be deleted. " : "") + "This cannot be undone.";
       const message = `${title}\n\n${body}`;
 
-      showConfirm(message, () => NodeService.deleteNode(node.id));
+      showConfirm(message, () => services.nodeService.deleteNode(node.id));
     }
   };
 
   const handleTitleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
     const newText = e.currentTarget.innerText;
     if (newText !== undefined && newText !== node.title) {
-      NodeService.updateNode(node.id, { title: newText });
+      services.nodeService.updateNode(node.id, { title: newText });
     }
   };
 
-  // Debounce the description update to avoid excessive re-renders while typing.
-  // useMemo is used to ensure the debounced function is not re-created on every render.
   const updateDescription = useMemo(
     () =>
       debounce((newDescription: string) => {
         if (newDescription !== node.description) {
-          NodeService.updateNode(node.id, { description: newDescription });
+          services.nodeService.updateNode(node.id, { description: newDescription });
         }
       }, 300),
-    [node.id, node.description]
+    [services.nodeService, node.id, node.description]
   );
   
-  // The blur event for the description should also trigger an update.
   const handleDescriptionBlur = (currentValue: string) => {
      if (currentValue !== node.description) {
-        NodeService.updateNode(node.id, { description: currentValue });
+        services.nodeService.updateNode(node.id, { description: currentValue });
      }
   };
 
-  // Determine if the node should be dimmed
   const isDimmed = !!selectedLegacy && !node.isBookend && !(node.tags || []).includes(selectedLegacy);
 
   return (
     <div
       className={clsx(
-        'non-pannable-node', // Marker class to prevent pan/zoom on nodes
+        'non-pannable-node',
         styles.node,
         styles[node.tone],
         { [styles.ghost]: node.isGhost },
         { [styles.event]: node.type === 'event' },
-        { [styles.dimmed]: isDimmed } // Apply dimmed class
+        { [styles.dimmed]: isDimmed }
       )}
-      // Add a data attribute for e2e testing or styling if needed
       data-node-id={node.id}
     >
       <div className={styles.contentWrapper}>
-        {/* SVG Anchors */}
         <div className={clsx(styles.anchor, styles.top, styles.left)} data-anchor="top-left"></div>
         <div className={clsx(styles.anchor, styles.top, styles.right)} data-anchor="top-right"></div>
         <div className={clsx(styles.anchor, styles.bottom, styles.left)} data-anchor="bottom-left"></div>
@@ -103,14 +96,17 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         />
         
         <HighlightableText
-          value={node.description}
+          value={node.description || ''}
           onChange={updateDescription}
           onBlur={handleDescriptionBlur}
           affirmedWords={affirmedWords}
           bannedWords={bannedWords}
+          placeholder={
+            node.type === 'period' ? 'Describe the Period...' :
+            node.type === 'event' ? 'Describe the Event...' : ''
+          }
         />
         
-        {/* Interaction Buttons */}
         <div className={styles['button-group']}>
           <button className={styles.button} onClick={handleToggleTone}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
           <button className={styles.button} onClick={handleToggleGhost}>Ghost</button>
@@ -124,3 +120,4 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
 }
 
 export const TimelineNodeComponent = memo(TimelineNodeComponentInternal);
+

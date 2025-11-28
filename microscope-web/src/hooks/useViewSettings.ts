@@ -1,23 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ydoc } from './useYjs';
 import * as Y from 'yjs';
 import { v4 as uuidv4 } from 'uuid';
 import type { ViewSettings } from '../types/settings';
 import { useModal } from '../context/ModalContext'; // Import useModal
+import { META_KEYS } from '../types/meta';
 
 const DEFAULT_LAYOUT_CONSTANTS: Required<ViewSettings['layout']['constants']> = {
   cardWidth: 348,
   zigzagOffset: 250,
   gapSize: 50,
-};
-
-// --- Y.js Shared Data Setup ---
-const metaMap = ydoc.getMap('meta');
-const getSharedSettingsLog = () => {
-  if (!metaMap.has('shared-settings-log')) {
-    metaMap.set('shared-settings-log', new Y.Array());
-  }
-  return metaMap.get('shared-settings-log') as Y.Array<any>;
 };
 
 interface SharedSettingsEvent {
@@ -30,8 +21,9 @@ interface SharedSettingsEvent {
 /**
  * A comprehensive hook to manage local and shared view settings, including
  * theme colors and layout constants.
+ * @param ydoc The Y.Doc instance for this session. Can be null initially.
  */
-export const useViewSettings = () => {
+export const useViewSettings = (ydoc: Y.Doc | null) => {
   const { showAlert, showConfirm } = useModal();
   const [layoutConstants, setLayoutConstants] = useState(DEFAULT_LAYOUT_CONSTANTS);
   const [appliedTheme, setAppliedTheme] = useState<Record<string, string>>({});
@@ -62,7 +54,14 @@ export const useViewSettings = () => {
 
   // --- Listener for Shared Settings ---
   useEffect(() => {
-    const sharedSettingsLog = getSharedSettingsLog();
+    if (!ydoc) return;
+
+    const metaMap = ydoc.getMap('meta');
+    if (!metaMap.has(META_KEYS.SHARED_SETTINGS_LOG)) {
+      metaMap.set(META_KEYS.SHARED_SETTINGS_LOG, new Y.Array());
+    }
+    const sharedSettingsLog = metaMap.get(META_KEYS.SHARED_SETTINGS_LOG) as Y.Array<any>;
+
 
     const observer = (event: Y.YArrayEvent<any>) => {
       event.changes.added?.forEach((item: any) => {
@@ -82,7 +81,7 @@ export const useViewSettings = () => {
     return () => {
       sharedSettingsLog.unobserve(observer);
     };
-  }, [applySettings, showConfirm]); // Add dependencies
+  }, [ydoc, applySettings, showConfirm]); // Add dependencies
 
   const resetSettings = useCallback(() => {
     // 1. Reset Theme
@@ -97,7 +96,17 @@ export const useViewSettings = () => {
   }, [appliedTheme]);
 
   const shareSettings = useCallback(() => {
-    const sharedSettingsLog = getSharedSettingsLog();
+    if (!ydoc) {
+      showAlert('Cannot share settings: not connected to a session.');
+      return;
+    }
+
+    const metaMap = ydoc.getMap('meta');
+    if (!metaMap.has(META_KEYS.SHARED_SETTINGS_LOG)) {
+      metaMap.set(META_KEYS.SHARED_SETTINGS_LOG, new Y.Array());
+    }
+    const sharedSettingsLog = metaMap.get(META_KEYS.SHARED_SETTINGS_LOG) as Y.Array<any>;
+    
     const currentSettings: ViewSettings = {
       theme: appliedTheme,
       layout: { constants: layoutConstants },
@@ -111,7 +120,7 @@ export const useViewSettings = () => {
     }]);
 
     showAlert('Your view settings have been shared!'); // Use custom alert
-  }, [appliedTheme, layoutConstants, showAlert]);
+  }, [ydoc, appliedTheme, layoutConstants, showAlert]);
 
   return useMemo(() => ({
     layoutConstants,
@@ -120,3 +129,4 @@ export const useViewSettings = () => {
     shareSettings,
   }), [layoutConstants, applySettings, resetSettings, shareSettings]);
 };
+

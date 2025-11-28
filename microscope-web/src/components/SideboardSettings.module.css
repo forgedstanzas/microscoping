@@ -45,3 +45,35 @@
 .hidden-input {
   display: none;
 }
+
+.peerList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--list-bg);
+}
+
+.peerItem {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--node-text);
+  font-size: 0.9rem;
+}
+
+.peerItem:last-child {
+  border-bottom: none;
+}
+
+.peerItem.isHost {
+  font-weight: bold;
+  background-color: rgba(255, 215, 0, 0.2); /* Gold-ish background */
+}
+
+.peerItem.isLens {
+  font-style: italic;
+  color: #646cff; /* Highlight color */
+}

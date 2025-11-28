@@ -50,3 +50,10 @@
   outline: 1px solid rgba(0, 255, 0, 0.5); /* Thin green border/outline */
   border-radius: 2px; /* Slightly rounded corners */
 }
+
+/* Placeholder for the contentEditable description */
+.textarea[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--node-meta-text);
+  pointer-events: none; /* Make sure the placeholder doesn't interfere with clicks */
+}

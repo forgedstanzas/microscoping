@@ -1,32 +1,31 @@
 import { TimelineNodeComponent } from './TimelineNode';
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { useNodes } from '../hooks/useNodes';
-import { calculateLayout as linearCalculateLayout, type DimensionMap, type LayoutMap } from '../layout/LinearAdapter';
-import { calculateLayout as zigZagCalculateLayout } from '../layout/ZigZagAdapter';
 import { LegacyOverlay } from './LegacyOverlay';
 import { TrackOverlay, type TrackSegment } from './TrackOverlay';
 import { EventButtonOverlay } from './EventButtonOverlay';
-import { NodeService } from '../services/NodeService';
 import './Canvas.css';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { ViewSettings } from '../types/settings';
 import type { TimelineNode } from '../types/timeline';
 import clsx from 'clsx';
+import { useYjsContext } from '../context/YjsContext';
+import { useUIState } from '../context/UIStateContext';
+import { useNodeLayout } from '../hooks/useNodeLayout';
 
 interface CanvasProps {
-  layoutMode: 'zigzag' | 'linear';
-  setLayoutMode: React.Dispatch<React.SetStateAction<'zigzag' | 'linear'>>;
   affirmedWords: string[];
   bannedWords: string[];
   layoutConstants: ViewSettings['layout']['constants'];
-  selectedLegacy: string | null;
 }
 
-export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, layoutConstants, selectedLegacy }: CanvasProps) {
-  const nodes = useNodes();
+export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
+  const { services } = useYjsContext();
+  const { layoutMode, selectedLegacy } = useUIState();
+  const nodes = useNodes(services.nodeService.ydoc);
+  const { layout, measureRef } = useNodeLayout(nodes);
+
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
-  const [layout, setLayout] = useState<LayoutMap>(new Map());
-  const [dimensions, setDimensions] = useState<DimensionMap>(new Map());
   const [initialY, setInitialY] = useState(window.innerHeight / 2);
   const [nodeBorderWidth, setNodeBorderWidth] = useState(8);
 
@@ -43,74 +42,6 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const observer = useRef(
-    new ResizeObserver(entries => {
-      setDimensions(prev => {
-        const newDimensions = new Map(prev);
-        let hasChanged = false;
-        for (const entry of entries) {
-          const id = (entry.target as HTMLElement).dataset.nodeId;
-          if (id) {
-            const { width, height } = entry.contentRect;
-            const existing = newDimensions.get(id);
-            if (!existing || existing.width !== width || existing.height !== height) {
-              newDimensions.set(id, { width, height });
-              hasChanged = true;
-            }
-          }
-        }
-        return hasChanged ? newDimensions : prev;
-      });
-    })
-  );
-
-  const measureRef = useCallback((node: HTMLDivElement | null) => {
-    if (node !== null) {
-      observer.current.observe(node);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (nodes.length > 0) {
-      let dimensionsToUse: DimensionMap;
-
-      // Check if all nodes currently in the state have been measured.
-      // This is more robust than checking map.size === nodes.length, which fails on deletion.
-      let allNodesMeasured = true;
-      for (const node of nodes) {
-        if (!dimensions.has(node.id)) {
-          allNodesMeasured = false;
-          break;
-        }
-      }
-
-      if (allNodesMeasured) {
-        // Use the existing dimensions map. It might be "dirty" with old nodes,
-        // but the layout functions will only access the keys present in the `nodes` array.
-        dimensionsToUse = dimensions;
-      } else {
-        // Fallback to default dimensions for any *new* unmeasured nodes.
-        const defaultDims = new Map(dimensions);
-        nodes.forEach(node => {
-          if (!defaultDims.has(node.id)) {
-            defaultDims.set(node.id, { width: layoutConstants?.cardWidth ?? 300, height: 150 });
-          }
-        });
-        dimensionsToUse = defaultDims;
-      }
-      
-      let newLayout: LayoutMap;
-      if (layoutMode === 'zigzag') {
-        newLayout = zigZagCalculateLayout(nodes, dimensionsToUse, layoutConstants);
-      } else {
-        newLayout = linearCalculateLayout(nodes, dimensionsToUse, layoutConstants);
-      }
-      
-      setLayout(newLayout);
-    }
-  }, [nodes, dimensions, layoutMode, layoutConstants]);
-
-  // --- Segment Calculation Logic Moved Here ---
   const periodTrackSegments = useMemo<TrackSegment[]>(() => {
     const periodNodes = nodes
       .filter(node => node.type === 'period' && layout.has(node.id))
@@ -129,7 +60,6 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
       const cx2 = nextLayout.x + nextLayout.width / 2;
       const cy2 = nextLayout.y + nextLayout.height / 2;
       
-      // Robustly find the midpoint of the visible gap between the two nodes
       const buttonX = ( (prevLayout.x + prevLayout.width) + nextLayout.x ) / 2;
       
       const t = isNaN(cx2 - cx1) || (cx2 - cx1) === 0 ? 0 : (buttonX - cx1) / (cx2 - cx1);
@@ -189,12 +119,12 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
 
   // --- Insert Callbacks ---
   const handleInsertPeriod = useCallback((payload: { prevNodeId: string, nextNodeId: string }) => {
-    NodeService.insertPeriodBetween(payload.prevNodeId, payload.nextNodeId);
-  }, []);
+    services.nodeService.insertPeriodBetween(payload.prevNodeId, payload.nextNodeId);
+  }, [services.nodeService]);
 
   const handleInsertEvent = useCallback((payload: { prevNodeId: string, nextNodeId: string }) => {
-    NodeService.insertEventBetween(payload.prevNodeId, payload.nextNodeId);
-  }, []);
+    services.nodeService.insertEventBetween(payload.prevNodeId, payload.nextNodeId);
+  }, [services.nodeService]);
 
 
   const handleCanvasClick = (event: React.MouseEvent) => {
@@ -288,3 +218,4 @@ export function Canvas({ layoutMode, setLayoutMode, affirmedWords, bannedWords, 
     </div>
   );
 }
+

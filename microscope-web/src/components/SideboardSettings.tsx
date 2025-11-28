@@ -1,25 +1,39 @@
 import React from 'react';
-import { SessionManager } from '../services/SessionManager';
 import { ViewSettingsService } from '../services/ViewSettingsService';
 import ThemeSwitcher from './ThemeSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import styles from './SideboardSettings.module.css';
 import type { ViewSettings } from '../types/settings';
 import { useViewSettings } from '../hooks/useViewSettings';
-import { useModal } from '../context/ModalContext'; // Import useModal
+import { useModal } from '../context/ModalContext';
+import { useYjsContext } from '../context/YjsContext';
+import { useMeta } from '../hooks/useMeta';
+import { useUIState } from '../context/UIStateContext';
+import { META_KEYS } from '../types/meta';
 
 interface SideboardSettingsProps {
-  layoutMode: 'zigzag' | 'linear';
-  onLayoutChange: (newMode: 'zigzag' | 'linear') => void;
   viewSettings: ReturnType<typeof useViewSettings>;
 }
 
-export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: SideboardSettingsProps) {
+export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
+  const { services, peers } = useYjsContext();
+  const { hostId, activePlayerId } = useMeta();
+  const { layoutMode, setLayoutMode } = useUIState();
   const { applySettings, resetSettings, shareSettings } = viewSettings;
-  const { showAlert, showConfirm } = useModal(); // Use the modal hook
+  const { showAlert, showConfirm } = useModal();
+
+  // --- Peer List Logic ---
+  const currentLens = activePlayerId || '';
+  const peerOptions = Array.from(peers.entries())
+    .map(([peerId, peerData]) => ({
+      id: peerId,
+      username: peerData.username || `Guest-${String(peerId).substring(0,4)}`
+    }))
+    .sort((a, b) => a.username.localeCompare(b.username));
+  // --- End Peer List Logic ---
 
   const handleExportClick = () => {
-    SessionManager.exportSession();
+    services.sessionService.exportSession();
   };
 
   const handleImportClick = () => {
@@ -33,11 +47,10 @@ export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: 
         reader.onload = (e) => {
           try {
             const sessionData = JSON.parse(e.target?.result as string);
-            // Use the custom modal for confirmation
             showConfirm(
               'This will overwrite the current session with the contents of the selected file. Are you sure?',
               () => {
-                SessionManager.applySession(sessionData);
+                services.sessionService.applySession(sessionData);
               }
             );
           } catch (error) {
@@ -64,7 +77,6 @@ export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: 
             const parsedSettings = JSON.parse(e.target?.result as string);
             if (ViewSettingsService.isValidViewSettings(parsedSettings)) {
               applySettings(parsedSettings);
-              // Success is silent
             } else {
               showAlert('Invalid View Settings file. Please ensure it has a "theme" or "layout" property.');
             }
@@ -84,7 +96,7 @@ export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: 
       <h3>Settings</h3>
       <div className={styles.settingsGrid}>
         <ThemeSwitcher />
-        <LayoutSwitcher currentLayout={layoutMode} onLayoutChange={onLayoutChange} />
+        <LayoutSwitcher currentLayout={layoutMode} onLayoutChange={setLayoutMode} />
       </div>
 
       <hr className={styles.divider} />
@@ -113,6 +125,23 @@ export function SideboardSettings({ layoutMode, onLayoutChange, viewSettings }: 
           Reset View
         </button>
       </div>
+
+      <hr className={styles.divider} />
+
+      <h3>Connected Peers</h3>
+      <ul className={styles.peerList}>
+        {peerOptions.map(peer => (
+          <li 
+            key={peer.id} 
+            className={`${styles.peerItem} ${peer.id === hostId ? styles.isHost : ''} ${peer.id === currentLens ? styles.isLens : ''}`}
+          >
+            {peer.username}
+            {peer.id === hostId && ' (Host)'}
+            {peer.id === currentLens && ' (Lens)'}
+          </li>
+        ))}
+        {peerOptions.length === 0 && <li>Only you are connected.</li>}
+      </ul>
     </div>
   );
 }

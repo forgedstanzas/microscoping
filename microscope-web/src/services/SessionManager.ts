@@ -1,34 +1,40 @@
-import { ydoc } from '../hooks/useYjs';
 import type { TimelineNode } from '../types/timeline';
 import * as Y from 'yjs';
 
 // Define the structure of the session data for import/export.
-interface SessionData {
+export interface SessionData {
   meta: Record<string, any>;
   nodes: Record<string, TimelineNode>;
   palette: Record<string, any>;
 }
 
-// Get references to the Y.js shared maps.
-// It's assumed 'meta' and 'palette' maps will be created if they don't exist.
-const metaMap = ydoc.getMap<any>('meta');
-const nodesMap = ydoc.getMap<TimelineNode>('nodes');
-const paletteMap = ydoc.getMap<any>('palette');
-
 /**
- * SessionManager provides static methods for exporting the current application
+ * SessionManager provides methods for exporting the current application
  * state to a file and importing a state from a file.
+ * An instance of this class is scoped to a specific Y.Doc.
  */
-export class SessionManager {
+export default class SessionManager {
+  private ydoc: Y.Doc;
+  private metaMap: Y.Map<any>;
+  private nodesMap: Y.Map<TimelineNode>;
+  private paletteMap: Y.Map<any>;
+
+  constructor(ydoc: Y.Doc) {
+    this.ydoc = ydoc;
+    this.metaMap = ydoc.getMap<any>('meta');
+    this.nodesMap = ydoc.getMap<TimelineNode>('nodes');
+    this.paletteMap = ydoc.getMap<any>('palette');
+  }
+
   /**
-   * Serializes the entire application state (meta, nodes, palette) into a
+   * Serializes the entire application state from the Y.Doc into a
    * JSON object and triggers a browser download.
    */
-  static exportSession() {
+  public exportSession() {
     const sessionData: SessionData = {
-      meta: metaMap.toJSON(),
-      nodes: nodesMap.toJSON(),
-      palette: paletteMap.toJSON(),
+      meta: this.metaMap.toJSON(),
+      nodes: this.nodesMap.toJSON(),
+      palette: this.paletteMap.toJSON(),
     };
 
     const blob = new Blob([JSON.stringify(sessionData, null, 2)], {
@@ -57,33 +63,32 @@ export class SessionManager {
    * existing data. This function should be called after user confirmation.
    * @param sessionData - The parsed session data to apply.
    */
-  static applySession(sessionData: SessionData) {
+  public applySession(sessionData: SessionData) {
     try {
       if (!sessionData.nodes || !sessionData.meta || !sessionData.palette) {
         throw new Error('Invalid session data format.');
       }
 
-      // Use a single transaction to perform all mutations atomically.
-      ydoc.transact(() => {
+      this.ydoc.transact(() => {
         // Nuke: Clear all existing data from the maps.
-        metaMap.clear();
-        nodesMap.clear();
-        paletteMap.clear();
+        this.metaMap.clear();
+        this.nodesMap.clear();
+        this.paletteMap.clear();
 
         // Rehydrate Meta and Nodes
         Object.entries(sessionData.meta).forEach(([key, value]) => {
-          metaMap.set(key, value);
+          this.metaMap.set(key, value);
         });
         Object.entries(sessionData.nodes).forEach(([key, value]) => {
-          nodesMap.set(key, value);
+          this.nodesMap.set(key, value);
         });
 
         // Rehydrate Palette correctly by converting plain arrays back to Y.Arrays
         Object.entries(sessionData.palette).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             const yArray = new Y.Array<string>();
-            yArray.push(...value); // Spread the items into the new Y.Array
-            paletteMap.set(key, yArray); // Set the Y.Array, not the plain array
+            yArray.push(...value);
+            this.paletteMap.set(key, yArray);
           }
         });
       });
@@ -93,8 +98,7 @@ export class SessionManager {
       window.location.reload();
     } catch (error) {
       console.error('SessionManager: Failed to apply session data.', error);
-      // The error alert will be handled by the UI component that calls this.
-      throw error; // Re-throw the error so the caller can handle it.
+      throw error;
     }
   }
 }

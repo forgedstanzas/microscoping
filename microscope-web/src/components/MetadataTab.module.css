@@ -1,0 +1,61 @@
+.metadataTab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.collapsibleHeader {
+  cursor: pointer;
+  user-select: none; /* Prevent text selection on click */
+}
+
+.infoGroup {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--list-bg);
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fieldGroup label {
+  font-weight: bold;
+  color: var(--node-text);
+}
+
+.textInput,
+.selectInput {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--node-text);
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width */
+}
+
+.textInput:focus,
+.selectInput:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+.toggleSwitch {
+  /* Basic styling for a checkbox */
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.toggleSwitch:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+

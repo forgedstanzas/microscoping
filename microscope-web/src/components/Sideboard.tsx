@@ -1,29 +1,32 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TabManager } from './TabManager';
-import { SideboardMeta } from './SideboardMeta';
+import { MetadataTab } from './MetadataTab';
 import { SideboardPalette } from './SideboardPalette';
 import { SideboardLegacies } from './SideboardLegacies';
 import { SideboardSettings } from './SideboardSettings';
 import styles from './Sideboard.module.css';
 import { usePalette } from '../hooks/usePalette';
 import { useViewSettings } from '../hooks/useViewSettings';
+import { useYjsContext } from '../context/YjsContext';
+import { useUIState } from '../context/UIStateContext';
 
 interface SideboardProps {
-  layoutMode: 'zigzag' | 'linear';
-  setLayoutMode: React.Dispatch<React.SetStateAction<'zigzag' | 'linear'>>;
   palette: ReturnType<typeof usePalette>;
   viewSettings: ReturnType<typeof useViewSettings>;
-  selectedLegacy: string | null;
-  onLegacySelect: (legacy: string | null) => void;
 }
 
 // Define the sections in their priority order (highest to lowest)
 const SECTIONS_IN_PRIORITY = ['meta', 'palette', 'legacies'];
 
-export function Sideboard({ layoutMode, setLayoutMode, palette, viewSettings, selectedLegacy, onLegacySelect }: SideboardProps) {
+export function Sideboard({ palette, viewSettings }: SideboardProps) {
+  const { ydoc, yjsState } = useYjsContext();
+  const { layoutMode, setLayoutMode, selectedLegacy, setSelectedLegacy } = useUIState();
   const sideboardRef = useRef<HTMLDivElement>(null);
   const [sideboardHeight, setSideboardHeight] = useState(0);
   const [sectionHeights, setSectionHeights] = useState<Record<string, number> | null>(null);
+  const [isMetadataCollapsed, setIsMetadataCollapsed] = useState(false);
+  const [isLegaciesCollapsed, setIsLegaciesCollapsed] = useState(false);
+
 
   // --- Measurement Phase ---
   const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
@@ -109,9 +112,9 @@ export function Sideboard({ layoutMode, setLayoutMode, palette, viewSettings, se
     // --- Render Logic ---
     const mainContentComponents = mainTabItems.map(id => {
       switch (id) {
-        case 'meta': return <SideboardMeta key="meta" />;
+        case 'meta': return <MetadataTab key="meta" isMetadataCollapsed={isMetadataCollapsed} setIsMetadataCollapsed={setIsMetadataCollapsed} isPeelOff={false} />;
         case 'palette': return <SideboardPalette key="palette" palette={palette} />;
-        case 'legacies': return <SideboardLegacies key="legacies" selectedLegacy={selectedLegacy} onLegacySelect={onLegacySelect} />;
+        case 'legacies': return <SideboardLegacies key="legacies" selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={false} />;
         default: return null;
       }
     });
@@ -131,7 +134,7 @@ export function Sideboard({ layoutMode, setLayoutMode, palette, viewSettings, se
           currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} /> });
           break;
         case 'legacies':
-          currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={onLegacySelect} /> });
+          currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={true} /> });
           break;
       }
     });
@@ -143,14 +146,14 @@ export function Sideboard({ layoutMode, setLayoutMode, palette, viewSettings, se
     });
 
     return currentTabs;
-  }, [sideboardHeight, sectionHeights, layoutMode, setLayoutMode, palette, viewSettings, selectedLegacy, onLegacySelect]);
+  }, [sideboardHeight, sectionHeights, layoutMode, setLayoutMode, palette, viewSettings, selectedLegacy, setSelectedLegacy, isMetadataCollapsed, isLegaciesCollapsed]);
 
   // A hidden container used only for measuring the initial size of components
   const measurementBox = (
     <div className={styles.measurementBox}>
-      <div ref={sectionRefs.meta}><SideboardMeta /></div>
+      <div ref={sectionRefs.meta}><MetadataTab isMetadataCollapsed={false} setIsMetadataCollapsed={() => {}} isPeelOff={false} /></div>
       <div ref={sectionRefs.palette}><SideboardPalette palette={palette} /></div>
-      <div ref={sectionRefs.legacies}><SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={onLegacySelect} /></div>
+      <div ref={sectionRefs.legacies}><SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={false} setIsCollapsed={() => {}} isPeelOff={false} /></div>
     </div>
   );
 

@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ydoc } from './useYjs';
+import type * as Y from 'yjs';
 import type { TimelineNode } from '../types/timeline';
 
-const nodesMap = ydoc.getMap<TimelineNode>('nodes');
-
 /**
- * A reactive hook that provides an array of all TimelineNodes from the
+ * A reactive hook that provides an array of all TimelineNodes from a given
  * Y.js document and automatically updates when nodes are added,
  * changed, or deleted.
  *
+ * @param ydoc The Y.js document to observe.
  * @returns An array of TimelineNode objects.
  */
-export function useNodes(): TimelineNode[] {
+export function useNodes(ydoc: Y.Doc): TimelineNode[] {
+  const nodesMap = ydoc.getMap<TimelineNode>('nodes');
   const [nodes, setNodes] = useState<TimelineNode[]>(() => Array.from(nodesMap.values()));
 
   useEffect(() => {
@@ -19,16 +19,14 @@ export function useNodes(): TimelineNode[] {
       setNodes(Array.from(nodesMap.values()));
     };
 
-    // Listen for changes to the nodes map.
     nodesMap.observe(handleChange);
-    // Immediately call handleChange to capture any data that might have synced before the observer was fully active.
-    handleChange();
+    handleChange(); // Initial sync
 
     return () => {
-      // Clean up the observer when the component unmounts.
       nodesMap.unobserve(handleChange);
     };
-  }, []);
+  }, [nodesMap]); // Re-subscribe if the map instance changes
 
   return nodes;
 }
+
