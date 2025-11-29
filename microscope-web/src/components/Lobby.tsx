@@ -11,9 +11,11 @@ import ThemeSwitcher from './ThemeSwitcher';
 
 interface LobbyProps {
   onJoinRoom: (roomId: string, initialTitle?: string) => void;
+  myUsername: string;
+  setMyUsername: (name: string) => void;
 }
 
-export function Lobby({ onJoinRoom }: LobbyProps) {
+export function Lobby({ onJoinRoom, myUsername, setMyUsername }: LobbyProps) {
   const [joinCode, setJoinCode] = useState('');
   const [newSessionTitle, setNewSessionTitle] = useState('');
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
@@ -49,6 +51,17 @@ export function Lobby({ onJoinRoom }: LobbyProps) {
       <div className={styles.lobbyBox}>
         <h1>Microscope</h1>
         <p>A fractal history game.</p>
+
+        <div className={styles.actionSection}>
+          <input
+            type="text"
+            value={myUsername}
+            onChange={(e) => setMyUsername(e.target.value)}
+            placeholder="Enter your name..."
+            className={styles.input}
+          />
+        </div>
+        
         
         <div className={styles.actionSection}>
           <h2>Create a New Game</h2>
@@ -84,19 +97,19 @@ export function Lobby({ onJoinRoom }: LobbyProps) {
             <ul className={styles.recentList}>
               {recentSessions.map((session) => (
                 <li key={session.id} className={styles.recentItem} onClick={() => onJoinRoom(session.id)}>
-                  <div className={styles.sessionInfo}>
-                    <span className={styles.recentName}>{session.name}</span>
+                  <span className={styles.recentName}>{session.name}</span>
+                  <div className={styles.rightSection}>
                     <span className={styles.recentDate}>
                       {new Date(session.lastAccessed).toLocaleString()}
                     </span>
+                    <button 
+                      className={styles.deleteButton}
+                      onClick={(e) => handleDeleteSession(e, session.id)}
+                      title="Remove from list"
+                    >
+                      &times;
+                    </button>
                   </div>
-                  <button 
-                    className={styles.deleteButton}
-                    onClick={(e) => handleDeleteSession(e, session.id)}
-                    title="Remove from list"
-                  >
-                    &times;
-                  </button>
                 </li>
               ))}
             </ul>

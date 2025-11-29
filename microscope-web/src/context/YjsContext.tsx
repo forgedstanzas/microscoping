@@ -6,24 +6,26 @@ import NodeService from '../services/NodeService';
 import SessionManager from '../services/SessionManager';
 import { addRecentSession } from '../services/RecentSessionsManager';
 import { META_KEYS } from '../types/meta';
+import { useModal } from './ModalContext';
 
-// 1. Define the shape of the context data
+// Delay in ms to wait before assuming we are the first peer.
+const INIT_DELAY = 2500; // Increased delay for more reliability
+
 interface YjsContextType {
-  ydoc: Y.Doc;
+  ydoc: Y.Doc | null;
   isSynced: boolean;
   myPeerId: number | null;
   myUsername: string;
-  meta: Y.Map<any>;
-  peers: Y.Map<any>;
+  meta: Y.Map<any> | null;
+  peers: Y.Map<any> | null;
   services: {
     nodeService: NodeService;
     sessionService: SessionManager;
-  };
+  } | null;
 }
 
 const YjsContext = createContext<YjsContextType | null>(null);
 
-// 2. Create the Provider component
 interface YjsProviderProps {
   children: React.ReactNode;
 }
@@ -31,12 +33,12 @@ interface YjsProviderProps {
 export function YjsProvider({ children }: YjsProviderProps) {
   const [roomId, setRoomIdInternal] = useState<string | null>(null);
   const [initialSessionTitle, setInitialSessionTitle] = useState<string | null>(null);
+  const { showAlert } = useModal();
 
   const onJoinRoom = (id: string, title?: string) => {
+    console.log(`YjsProvider: Attempting to join room '${id}' with initial title: '${title || 'none'}'`);
+    setInitialSessionTitle(title || null);
     setRoomIdInternal(id);
-    if (title) {
-      setInitialSessionTitle(title);
-    }
   };
   
   useEffect(() => {
@@ -44,61 +46,77 @@ export function YjsProvider({ children }: YjsProviderProps) {
     const urlRoomId = urlParams.get('room');
     if (urlRoomId) {
       onJoinRoom(urlRoomId);
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (roomId) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('room') !== roomId) {
+        url.searchParams.set('room', roomId);
+        window.history.pushState({}, '', url.toString());
+      }
+    }
+  }, [roomId]);
   
   const yjsState = useYjsHook(roomId);
-  const { ydoc, isSynced, myPeerId, meta, peers } = yjsState;
+  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername } = yjsState;
 
-  // Create service instances once ydoc is available
   const services = useMemo(() => {
     if (!ydoc) return null;
-    
     const nodeService = new NodeService(ydoc);
     const sessionService = new SessionManager(ydoc);
-
     return { nodeService, sessionService };
   }, [ydoc]);
 
-  // Effect for one-time setup of a new document.
-  // This MUST run after the document is synced to prevent race conditions.
+  // Effect for deferred one-time setup of a new document.
   useEffect(() => {
-    if (isSynced && services) {
-      const nodesMap = ydoc.getMap('nodes');
-      if (nodesMap.size === 0) {
-        console.log('YjsProvider: Synced and empty, initializing new document...');
-        services.nodeService.addNode({ type: 'period', title: 'Start Period', isBookend: true, order: 0 });
-        services.nodeService.addNode({ type: 'period', title: 'End Period', isBookend: true, order: 1 });
-        if (myPeerId !== null) {
-          services.nodeService.setHostId(myPeerId);
-        }
-      }
-    }
-  }, [isSynced, services, ydoc, myPeerId]);
+    if (isSynced && services && ydoc && myPeerId !== null && peers) {
+      const initTimeout = setTimeout(() => {
+        const nodesMap = ydoc.getMap('nodes');
+        const peerCount = peers.size; 
+        
+        console.log(`YjsProvider: Final initialization check after ${INIT_DELAY}ms. Nodes map size: ${nodesMap.size}, Peer count: ${peerCount}`);
 
-  // Effect for session management (setting initial title)
-  useEffect(() => {
-    if (isSynced && services && initialSessionTitle && !meta.get(META_KEYS.HISTORY_TITLE)) {
-      services.nodeService.setHistoryTitle(initialSessionTitle);
-      setInitialSessionTitle(null);
+        if (nodesMap.size === 0) {
+          // If we are alone after the delay, our action depends on our intent.
+          if (peerCount <= 1) {
+            // If `initialSessionTitle` is not null, it means we *intended* to create a new room.
+            if (initialSessionTitle !== null) {
+              console.log(`YjsProvider: We are alone and intended to create. Initializing.`);
+              services.nodeService.addNode({ type: 'period', title: 'Start Period', isBookend: true, order: 0 });
+              services.nodeService.addNode({ type: 'period', title: 'End Period', isBookend: true, order: 1 });
+              services.nodeService.setHostId(myPeerId);
+              // Also set the title if provided
+              if (initialSessionTitle) {
+                services.nodeService.setHistoryTitle(initialSessionTitle);
+              }
+            } else {
+              // We joined via a link/recent, found no local data, and found no peers. This is a connection failure.
+              console.error(`YjsProvider: Failed to find peers for room '${roomId}'. Displaying error.`);
+              showAlert('Connection Failed\n\nCould not connect to any peers in the session. Please check the room code or your network connection and try again.');
+            }
+          } else {
+            // We found peers, but the document is still empty. We should just wait for the data to sync.
+            console.log(`YjsProvider: Found peers, waiting for document sync from them.`);
+          }
+        }
+      }, INIT_DELAY);
+
+      return () => clearTimeout(initTimeout);
     }
-  }, [isSynced, services, initialSessionTitle, meta]);
+  }, [isSynced, services, ydoc, myPeerId, peers, initialSessionTitle, roomId, showAlert]);
 
   // Effect to keep the 'recent sessions' list up-to-date
   useEffect(() => {
-    if (isSynced && roomId) {
-      const handleMetaChange = (event: Y.YMapEvent<any>) => {
-        if (event.keysChanged.has(META_KEYS.HISTORY_TITLE) || !event.keysChanged.size) { // Also run on initial observe
-          const sessionName = meta.get(META_KEYS.HISTORY_TITLE) || 'Untitled Session';
-          addRecentSession(roomId, sessionName as string);
-        }
+    if (isSynced && roomId && meta) {
+      const handleMetaChange = () => {
+        const sessionName = meta.get(META_KEYS.HISTORY_TITLE) || 'Untitled Session';
+        addRecentSession(roomId, sessionName as string);
       };
-
       // Run once on setup and then whenever the meta map changes
-      handleMetaChange({ keysChanged: new Set() } as any); // Initial run
+      handleMetaChange();
       meta.observe(handleMetaChange);
-
       return () => {
         meta.unobserve(handleMetaChange);
       };
@@ -107,40 +125,70 @@ export function YjsProvider({ children }: YjsProviderProps) {
 
   // Effect to handle host election
   useEffect(() => {
-    if (isSynced && services && myPeerId !== null) {
-      const currentHostId = meta.get(META_KEYS.HOST_ID);
-      const connectedPeerIds = Array.from(peers.keys());
-      if (!currentHostId || !connectedPeerIds.includes(currentHostId)) {
-        services.nodeService.setHostId(myPeerId);
-      }
+    if (isSynced && services && myPeerId !== null && meta && peers) {
+      const handleElection = () => {
+        const currentHostId = meta.get(META_KEYS.HOST_ID) as number | undefined;
+        const connectedPeerIds = Array.from(peers.keys());
+
+        if (currentHostId === undefined || !connectedPeerIds.includes(String(currentHostId))) {
+          const candidateIds = connectedPeerIds.map(id => parseInt(id, 10));
+          // Ensure my own ID is in the running if I'm not in the peers list yet
+          if (!candidateIds.includes(myPeerId)) {
+            candidateIds.push(myPeerId);
+          }
+          
+          const newHostId = Math.min(...candidateIds);
+
+          if (myPeerId === newHostId && currentHostId !== newHostId) {
+            console.log(`YjsProvider: Host ${currentHostId} not found. Electing new host: ${newHostId}`);
+            services.nodeService.setHostId(newHostId);
+          }
+        }
+      };
+
+      peers.observe(handleElection);
+      handleElection(); // Initial check
+
+      return () => {
+        peers.unobserve(handleElection);
+      };
     }
-  }, [isSynced, services, peers, myPeerId, meta]);
+  }, [isSynced, services, myPeerId, meta, peers]);
   
   // Effect to manage the NodeService lifecycle
   useEffect(() => {
-    // When services are created, this effect runs.
-    // When the component unmounts, the cleanup function will run.
     return () => {
       services?.nodeService.destroy();
     };
   }, [services]);
 
-  if (!roomId || !ydoc || !services) {
-    return <Lobby onJoinRoom={onJoinRoom} />;
+  if (!roomId) {
+    return <Lobby onJoinRoom={onJoinRoom} myUsername={myUsername} setMyUsername={setMyUsername} />;
+  }
+  
+  if (!ydoc || !meta || !peers || !services) {
+    return <div>Loading Session...</div>;
   }
 
   return (
-    <YjsContext.Provider value={{ ...yjsState, ydoc, services }}>
-      {isSynced ? children : <div>Loading...</div>}
+    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, peers, services }}>
+      {isSynced ? children : <div>Syncing...</div>}
     </YjsContext.Provider>
   );
 }
 
-// 3. Create the custom hook for consuming the context
 export function useYjsContext() {
   const context = useContext(YjsContext);
   if (!context) {
     throw new Error('useYjsContext must be used within a YjsProvider');
   }
-  return context;
+  return context as YjsContextType & {
+    ydoc: Y.Doc;
+    meta: Y.Map<any>;
+    peers: Y.Map<any>;
+    services: {
+      nodeService: NodeService;
+      sessionService: SessionManager;
+    };
+  };
 }

@@ -29,6 +29,11 @@
   filter: grayscale(100%);
 }
 
+.disabled .contentWrapper {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 /* The new inner wrapper for the node's content */
 .contentWrapper {
   /* Place the content wrapper into the grid cell defined by the parent's padding */

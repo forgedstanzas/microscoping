@@ -90,7 +90,7 @@
   background: none;
   border: none;
   text-align: left;
-  padding: 10px;
+  padding: 6px 10px; /* Reduced vertical padding */
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -98,24 +98,42 @@
   align-items: center;
   color: var(--node-text);
   transition: background-color 0.2s;
+  position: relative; /* Added for absolute positioning of delete button */
 }
 
 .recentItem:hover {
   background-color: var(--node-bg-hover);
 }
 
-.sessionInfo {
-  display: flex;
-  flex-direction: column;
+.rightSection {
+  /* Removed position: relative */
+  flex-shrink: 0;
+  display: inline-flex; /* Use inline-flex to shrink to content */
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: 1rem;
+  /* Add a min-width to ensure space for the button when date is short */
+  min-width: 2rem; /* Matches button size */
 }
 
 .deleteButton {
+  position: absolute;
+  top: 50%;
+  right: 10px; /* Pinned to the right with padding */
+  transform: translateY(-50%); /* Vertically center */
+
+  width: 2rem; /* Reduced width */
+  height: 2rem; /* Reduced height */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   background: none;
   border: none;
   color: var(--node-meta-text);
   font-size: 1.5rem;
   line-height: 1;
-  padding: 0 0.5rem;
   border-radius: 50%;
   cursor: pointer;
   opacity: 0;
@@ -133,9 +151,19 @@
 
 .recentName {
   font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
 }
 
 .recentDate {
   font-size: 0.8rem;
   color: var(--node-meta-text);
+  transition: opacity 0.2s;
 }
+
+.recentItem:hover .recentDate {
+  opacity: 0;
+}
+

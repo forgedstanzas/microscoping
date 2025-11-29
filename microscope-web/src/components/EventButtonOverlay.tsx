@@ -5,6 +5,7 @@ import type { TimelineNode } from '../types/timeline';
 import type { LayoutMap } from '../layout/LinearAdapter';
 import type { ViewSettings } from '../types/settings';
 import { useYjsContext } from '../context/YjsContext';
+import { useMeta } from '../hooks/useMeta';
 
 interface EventButtonOverlayProps {
   nodes: TimelineNode[];
@@ -22,8 +23,13 @@ interface EventButtonPlacement {
 }
 
 export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, layout, layoutConstants, layoutMode, nodeBorderWidth }) => {
-  const { services } = useYjsContext();
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null); // Renamed state to hoveredNodeId
+  const { services, myPeerId } = useYjsContext();
+  const { isStrictMode, activePlayerId, hostId } = useMeta();
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  const isHost = myPeerId === hostId;
+  const isMyTurn = myPeerId === activePlayerId;
+  const canEdit = !isStrictMode || isMyTurn || isHost;
 
   const eventButtonPlacements = useMemo(() => {
     const placements: EventButtonPlacement[] = [];
@@ -83,6 +89,10 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
   const handleAddEvent = useCallback((parentId: string) => {
     services.nodeService.addEventToPeriod(parentId);
   }, [services.nodeService]);
+
+  if (!canEdit) {
+    return null; // Do not render the overlay at all if user cannot edit
+  }
 
   return (
     <svg className={styles.eventButtonSvg} onMouseLeave={() => setHoveredNodeId(null)}> // Renamed state usage

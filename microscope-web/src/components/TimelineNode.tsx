@@ -6,6 +6,7 @@ import { HighlightableText } from './HighlightableText';
 import { debounce } from '../utils/debounce';
 import { useModal } from '../context/ModalContext';
 import { useYjsContext } from '../context/YjsContext';
+import { useMeta } from '../hooks/useMeta';
 
 interface TimelineNodeProps {
   node: TimelineNode;
@@ -15,9 +16,15 @@ interface TimelineNodeProps {
 }
 
 function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selectedLegacy }: TimelineNodeProps) {
-  const { services } = useYjsContext();
+  const { services, myPeerId } = useYjsContext();
+  const { isStrictMode, activePlayerId, hostId } = useMeta();
   const titleRef = useRef<HTMLDivElement>(null);
   const { showConfirm } = useModal();
+
+  const isHost = myPeerId === hostId;
+  const isMyTurn = myPeerId === activePlayerId;
+  const canEdit = !isStrictMode || isMyTurn || isHost;
+  const isEditable = canEdit && !node.isBookend;
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';
@@ -76,7 +83,8 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         styles[node.tone],
         { [styles.ghost]: node.isGhost },
         { [styles.event]: node.type === 'event' },
-        { [styles.dimmed]: isDimmed }
+        { [styles.dimmed]: isDimmed },
+        { [styles.disabled]: !canEdit }
       )}
       data-node-id={node.id}
     >
@@ -89,7 +97,7 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         <div
           ref={titleRef}
           className={styles.title}
-          contentEditable
+          contentEditable={isEditable}
           suppressContentEditableWarning
           onBlur={handleTitleBlur}
           dangerouslySetInnerHTML={{ __html: node.title }}
@@ -105,13 +113,14 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
             node.type === 'period' ? 'Describe the Period...' :
             node.type === 'event' ? 'Describe the Event...' : ''
           }
+          isEditable={isEditable}
         />
         
         <div className={styles['button-group']}>
-          <button className={styles.button} onClick={handleToggleTone}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
-          <button className={styles.button} onClick={handleToggleGhost}>Ghost</button>
+          <button className={styles.button} onClick={handleToggleTone} disabled={!canEdit}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
+          <button className={styles.button} onClick={handleToggleGhost} disabled={!canEdit}>Ghost</button>
           {!node.isBookend && (
-            <button className={styles.button} onClick={handleDelete}>Delete</button>
+            <button className={styles.button} onClick={handleDelete} disabled={!canEdit}>Delete</button>
           )}
         </div>
       </div>

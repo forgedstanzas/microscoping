@@ -44,16 +44,34 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
     services.nodeService.setIsStrictMode(!isStrictMode);
   };
 
-  // Prepare peer options for Current Lens dropdown
-  const peerOptions = Array.from(peers.entries())
-    .map(([peerId, peerData]) => ({
-      id: peerId,
-      username: peerData.username || `Guest-${String(peerId).substring(0,4)}` // Fallback username
-    }))
-    .sort((a, b) => a.username.localeCompare(b.username));
+  const [peerOptions, setPeerOptions] = React.useState<Array<{id: string, username: string}>>([]);
+  const [hostUsername, setHostUsername] = React.useState('N/A');
 
-  // Find host username for display purposes
-  const hostUsername = hostId ? peers.get(hostId)?.username || 'N/A' : 'N/A';
+  React.useEffect(() => {
+    if (!peers) return;
+
+    const updatePeers = () => {
+      // Update peer options for dropdown
+      const options = Array.from(peers.entries())
+        .map(([peerId, peerData]) => ({
+          id: peerId,
+          username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
+        }))
+        .sort((a, b) => a.username.localeCompare(b.username));
+      setPeerOptions(options);
+
+      // Update host username
+      const currentHostUsername = hostId ? peers.get(String(hostId))?.name || 'N/A' : 'N/A';
+      setHostUsername(currentHostUsername);
+    };
+
+    peers.observe(updatePeers);
+    updatePeers(); // Initial population
+
+    return () => {
+      peers.unobserve(updatePeers);
+    };
+  }, [peers, hostId]);
 
   return (
     <div className={styles.metadataTab}>
@@ -80,6 +98,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               value={historyTitle}
               onChange={handleHistoryTitleChange}
               className={styles.textInput}
+              disabled={!isHost}
             />
           </div>
     
@@ -91,6 +110,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               value={currentFocus}
               onChange={handleCurrentFocusChange}
               className={styles.textInput}
+              disabled={!isHost}
             />
           </div>
     

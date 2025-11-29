@@ -23,13 +23,29 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
   const { showAlert, showConfirm } = useModal();
 
   // --- Peer List Logic ---
+  const [peerOptions, setPeerOptions] = React.useState<Array<{id: string, username: string}>>([]);
   const currentLens = activePlayerId || '';
-  const peerOptions = Array.from(peers.entries())
-    .map(([peerId, peerData]) => ({
-      id: peerId,
-      username: peerData.username || `Guest-${String(peerId).substring(0,4)}`
-    }))
-    .sort((a, b) => a.username.localeCompare(b.username));
+
+  React.useEffect(() => {
+    if (!peers) return;
+
+    const updatePeerOptions = () => {
+      const options = Array.from(peers.entries())
+        .map(([peerId, peerData]) => ({
+          id: peerId,
+          username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
+        }))
+        .sort((a, b) => a.username.localeCompare(b.username));
+      setPeerOptions(options);
+    };
+
+    peers.observe(updatePeerOptions);
+    updatePeerOptions(); // Initial population
+
+    return () => {
+      peers.unobserve(updatePeerOptions);
+    };
+  }, [peers]);
   // --- End Peer List Logic ---
 
   const handleExportClick = () => {

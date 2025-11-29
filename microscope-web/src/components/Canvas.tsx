@@ -12,6 +12,7 @@ import clsx from 'clsx';
 import { useYjsContext } from '../context/YjsContext';
 import { useUIState } from '../context/UIStateContext';
 import { useNodeLayout } from '../hooks/useNodeLayout';
+import { useMeta } from '../hooks/useMeta';
 
 interface CanvasProps {
   affirmedWords: string[];
@@ -20,14 +21,57 @@ interface CanvasProps {
 }
 
 export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
-  const { services } = useYjsContext();
+  const { services, myPeerId, peers } = useYjsContext();
   const { layoutMode, selectedLegacy } = useUIState();
+  const { isStrictMode, activePlayerId } = useMeta();
   const nodes = useNodes(services.nodeService.ydoc);
   const { layout, measureRef } = useNodeLayout(nodes);
 
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [initialY, setInitialY] = useState(window.innerHeight / 2);
   const [nodeBorderWidth, setNodeBorderWidth] = useState(8);
+
+  // --- Turn Banner Logic ---
+  const [activePlayerName, setActivePlayerName] = useState('');
+
+  useEffect(() => {
+    if (!peers) return;
+
+    const updatePlayerName = () => {
+      if (activePlayerId) {
+        const name = peers.get(String(activePlayerId))?.name || `Player ${String(activePlayerId).substring(0, 4)}`;
+        setActivePlayerName(name);
+      } else {
+        setActivePlayerName('');
+      }
+    };
+
+    // We observe the peers map for any change
+    peers.observe(updatePlayerName);
+    
+    // Initial call
+    updatePlayerName();
+
+    return () => {
+      peers.unobserve(updatePlayerName);
+    };
+  }, [peers, activePlayerId]);
+
+  const turnBanner = useMemo(() => {
+    if (!isStrictMode) return null;
+
+    const isMyTurn = myPeerId === activePlayerId;
+    if (isMyTurn) {
+      return <div className="turn-banner your-turn">Your Turn!</div>;
+    }
+
+    if (activePlayerId) {
+      return <div className="turn-banner waiting">Waiting for {activePlayerName}...</div>;
+    }
+
+    return <div className="turn-banner waiting">Waiting for host to select a Lens...</div>;
+  }, [isStrictMode, activePlayerId, myPeerId, activePlayerName]);
+  // --- End Turn Banner Logic ---
 
   useEffect(() => {
     const value = getComputedStyle(document.documentElement).getPropertyValue('--node-border-width');
@@ -159,6 +203,7 @@ export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasPr
 
   return (
     <div className="canvas-container">
+      {turnBanner}
       <button className="recenter-button" onClick={handleRecenter}>Re-center</button>
       <TransformWrapper
         ref={transformRef}

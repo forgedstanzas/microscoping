@@ -9,6 +9,7 @@ interface HighlightableTextProps {
   bannedWords: string[]; // New prop
   affirmedWords: string[]; // New prop
   placeholder?: string;
+  isEditable: boolean;
 }
 
 /**
@@ -48,7 +49,7 @@ function renderPaletteHighlights(text: string, matches: PaletteMatch[]): React.R
   return nodes;
 }
 
-export function HighlightableText({ value, onChange, onBlur, bannedWords, affirmedWords, placeholder }: HighlightableTextProps) {
+export function HighlightableText({ value, onChange, onBlur, bannedWords, affirmedWords, placeholder, isEditable }: HighlightableTextProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
   const highlightedContent = useMemo(() => {
@@ -73,7 +74,7 @@ export function HighlightableText({ value, onChange, onBlur, bannedWords, affirm
       <div
         ref={editorRef}
         className={styles.textarea}
-        contentEditable
+        contentEditable={isEditable}
         onBlur={(e) => onBlur(e.currentTarget.innerText)}
         onInput={(e) => onChange(e.currentTarget.innerText)}
         // Suppress React's warning about managing contentEditable content

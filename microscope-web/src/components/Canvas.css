@@ -7,6 +7,33 @@
   position: relative; /* Needed for absolute positioning of children */
 }
 
+/* --- Turn Banner Styles --- */
+.turn-banner {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+}
+
+.turn-banner.your-turn {
+  background-color: #28a745; /* Green */
+}
+
+.turn-banner.waiting {
+  background-color: #6c757d; /* Grey */
+}
+/* --- End Turn Banner Styles --- */
+
 .recenter-button {
   position: absolute;
   top: 20px;
