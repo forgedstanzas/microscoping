@@ -24,7 +24,7 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
   const isHost = myPeerId === hostId;
   const isMyTurn = myPeerId === activePlayerId;
   const canEdit = !isStrictMode || isMyTurn || isHost;
-  const isEditable = canEdit && !node.isBookend;
+  const isEditable = canEdit;
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';

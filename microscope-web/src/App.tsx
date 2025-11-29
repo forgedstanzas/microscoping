@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Canvas } from './components/Canvas';
 import { Sideboard } from './components/Sideboard';
+import { StatusIndicator } from './components/StatusIndicator';
 import { usePalette } from './hooks/usePalette';
 import { useViewSettings } from './hooks/useViewSettings';
 import { useYjsContext } from './context/YjsContext';
@@ -21,6 +22,7 @@ function App() {
   
   return (
     <>
+      <StatusIndicator />
       <Canvas
         affirmedWords={paletteState.affirmedWords}
         bannedWords={paletteState.bannedWords}

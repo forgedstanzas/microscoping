@@ -25,6 +25,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
   const [sideboardHeight, setSideboardHeight] = useState(0);
   const [sectionHeights, setSectionHeights] = useState<Record<string, number> | null>(null);
   const [isMetadataCollapsed, setIsMetadataCollapsed] = useState(false);
+  const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
   const [isLegaciesCollapsed, setIsLegaciesCollapsed] = useState(false);
 
 
@@ -88,9 +89,13 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     // Only perform calculation if we have all the measurements
     if (sectionHeights && sideboardHeight > 0) {
       let cumulativeHeight = 0;
-      // Always keep the first, highest-priority item in the main tab
-      mainTabItems.push(SECTIONS_IN_PRIORITY[0]);
-      cumulativeHeight += sectionHeights[SECTIONS_IN_PRIORITY[0]] || 0;
+      // Handle meta tab separately since its height is dynamic
+      const metaTabCurrentHeight = isMetadataCollapsed 
+        ? 40 // Approx height of the header when collapsed
+        : sectionHeights[SECTIONS_IN_PRIORITY[0]] || 0;
+      
+      mainTabItems.push(SECTIONS_IN_PRIORITY[0]); // 'meta'
+      cumulativeHeight += metaTabCurrentHeight;
 
       // Iterate through the rest of the items to see if they fit
       for (let i = 1; i < SECTIONS_IN_PRIORITY.length; i++) {
@@ -113,7 +118,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     const mainContentComponents = mainTabItems.map(id => {
       switch (id) {
         case 'meta': return <MetadataTab key="meta" isMetadataCollapsed={isMetadataCollapsed} setIsMetadataCollapsed={setIsMetadataCollapsed} isPeelOff={false} />;
-        case 'palette': return <SideboardPalette key="palette" palette={palette} />;
+        case 'palette': return <SideboardPalette key="palette" palette={palette} isCollapsed={isPaletteCollapsed} setIsCollapsed={setIsPaletteCollapsed} isPeelOff={false} />;
         case 'legacies': return <SideboardLegacies key="legacies" selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={false} />;
         default: return null;
       }
@@ -129,9 +134,9 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     }
 
     peeledOffItems.forEach(id => {
-       switch (id) {
+      switch (id) {
         case 'palette': 
-          currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} /> });
+          currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} isCollapsed={isPaletteCollapsed} setIsCollapsed={setIsPaletteCollapsed} isPeelOff={true} /> });
           break;
         case 'legacies':
           currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={true} /> });
@@ -146,7 +151,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     });
 
     return currentTabs;
-  }, [sideboardHeight, sectionHeights, layoutMode, setLayoutMode, palette, viewSettings, selectedLegacy, setSelectedLegacy, isMetadataCollapsed, isLegaciesCollapsed]);
+  }, [sideboardHeight, sectionHeights, layoutMode, setLayoutMode, palette, viewSettings, selectedLegacy, setSelectedLegacy, isMetadataCollapsed, isPaletteCollapsed, isLegaciesCollapsed]);
 
   // A hidden container used only for measuring the initial size of components
   const measurementBox = (

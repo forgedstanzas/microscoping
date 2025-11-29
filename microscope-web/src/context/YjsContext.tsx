@@ -16,6 +16,7 @@ interface YjsContextType {
   isSynced: boolean;
   myPeerId: number | null;
   myUsername: string;
+  signalingStatus: 'connecting' | 'connected' | 'disconnected';
   meta: Y.Map<any> | null;
   peers: Y.Map<any> | null;
   services: {
@@ -60,7 +61,7 @@ export function YjsProvider({ children }: YjsProviderProps) {
   }, [roomId]);
   
   const yjsState = useYjsHook(roomId);
-  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername } = yjsState;
+  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername, signalingStatus } = yjsState;
 
   const services = useMemo(() => {
     if (!ydoc) return null;
@@ -171,8 +172,8 @@ export function YjsProvider({ children }: YjsProviderProps) {
   }
 
   return (
-    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, peers, services }}>
-      {isSynced ? children : <div>Syncing...</div>}
+    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, peers, services, signalingStatus }}>
+      {children}
     </YjsContext.Provider>
   );
 }

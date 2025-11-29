@@ -18,6 +18,7 @@ export const useYjs = (roomId: string | null) => {
   const [peers, setPeers] = useState<Y.Map<any> | null>(null);
   const [isSynced, setIsSynced] = useState(false);
   const [myPeerId, setMyPeerId] = useState<number | null>(null);
+  const [signalingStatus, setSignalingStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   const [myUsername, setMyUsername] = useState<string>(() => {
     return localStorage.getItem('microscope-username') || generateDefaultUsername();
@@ -43,7 +44,7 @@ export const useYjs = (roomId: string | null) => {
 
     const persistence = new IndexeddbPersistence(roomId, newYDoc);
     const webrtcProvider = new WebrtcProvider(roomId, newYDoc, {
-      signaling: ['ws://localhost:4444'],
+      signaling: ['https://microscoping-signaling-server.onrender.com/'],
     });
 
     // --- State Updates ---
@@ -53,6 +54,11 @@ export const useYjs = (roomId: string | null) => {
     setMyPeerId(webrtcProvider.awareness.clientID);
     
     // --- Event Handlers ---
+    const handleSignalingStatus = (event: { status: 'connected' | 'disconnected' }) => {
+      console.log(`Signaling status changed: ${event.status}`);
+      setSignalingStatus(event.status);
+    };
+
     const handleSync = (synced: boolean) => {
       if (synced) {
         setIsSynced(true);
@@ -81,6 +87,7 @@ export const useYjs = (roomId: string | null) => {
     };
 
     // --- Attach Handlers ---
+    webrtcProvider.on('status', handleSignalingStatus);
     persistence.on('synced', handleSync);
     if (persistence.synced) {
       handleSync(true);
@@ -109,5 +116,5 @@ export const useYjs = (roomId: string | null) => {
     };
   }, [roomId, myUsername]);
 
-  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers };
+  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus };
 };
