@@ -4,6 +4,7 @@ import { useYjs as useYjsHook } from '../hooks/useYjs';
 import { Lobby } from '../components/Lobby';
 import NodeService from '../services/NodeService';
 import SessionManager from '../services/SessionManager';
+import { TurnService } from '../services/TurnService'; // Import TurnService
 import { addRecentSession } from '../services/RecentSessionsManager';
 import { META_KEYS } from '../types/meta';
 import { useModal } from './ModalContext';
@@ -22,6 +23,7 @@ interface YjsContextType {
   services: {
     nodeService: NodeService;
     sessionService: SessionManager;
+    turnService: TurnService; // Add TurnService here
   } | null;
 }
 
@@ -61,14 +63,15 @@ export function YjsProvider({ children }: YjsProviderProps) {
   }, [roomId]);
   
   const yjsState = useYjsHook(roomId);
-  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername, signalingStatus } = yjsState;
+  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername, signalingStatus, awareness } = yjsState;
 
   const services = useMemo(() => {
-    if (!ydoc) return null;
-    const nodeService = new NodeService(ydoc);
+    if (!ydoc || !myPeerId || !awareness) return null; // Ensure awareness is available
+    const nodeService = new NodeService(ydoc, myPeerId); // Pass myPeerId to NodeService
     const sessionService = new SessionManager(ydoc);
-    return { nodeService, sessionService };
-  }, [ydoc]);
+    const turnService = new TurnService(ydoc, awareness, myPeerId); // Instantiate TurnService
+    return { nodeService, sessionService, turnService }; // Return turnService
+  }, [ydoc, myPeerId, awareness]); // Add awareness to dependencies
 
   // Effect for deferred one-time setup of a new document.
   useEffect(() => {
@@ -92,6 +95,7 @@ export function YjsProvider({ children }: YjsProviderProps) {
               if (initialSessionTitle) {
                 services.nodeService.setHistoryTitle(initialSessionTitle);
               }
+              services.turnService.initializeTurn(); // Initialize the turn
             } else {
               // We joined via a link/recent, found no local data, and found no peers. This is a connection failure.
               console.error(`YjsProvider: Failed to find peers for room '${roomId}'. Displaying error.`);
@@ -190,6 +194,7 @@ export function useYjsContext() {
     services: {
       nodeService: NodeService;
       sessionService: SessionManager;
+      turnService: TurnService; // Add TurnService here
     };
   };
 }
