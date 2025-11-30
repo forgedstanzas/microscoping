@@ -91,8 +91,6 @@ export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasPr
       .filter(node => node.type === 'period' && layout.has(node.id))
       .sort((a, b) => a.order - b.order);
     const segments: TrackSegment[] = [];
-    const GAP_HORIZONTAL = layoutConstants?.gapSize ?? 50;
-    const PERIOD_MARGIN = 34;
     for (let i = 0; i < periodNodes.length - 1; i++) {
       const prevPeriod = periodNodes[i];
       const nextPeriod = periodNodes[i + 1];

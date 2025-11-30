@@ -119,7 +119,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
       switch (id) {
         case 'meta': return <MetadataTab key="meta" isMetadataCollapsed={isMetadataCollapsed} setIsMetadataCollapsed={setIsMetadataCollapsed} isPeelOff={false} />;
         case 'palette': return <SideboardPalette key="palette" palette={palette} isCollapsed={isPaletteCollapsed} setIsCollapsed={setIsPaletteCollapsed} isPeelOff={false} />;
-        case 'legacies': return <SideboardLegacies key="legacies" selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={false} />;
+        case 'legacies': return <SideboardLegacies key="legacies" isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={false} />;
         default: return null;
       }
     });

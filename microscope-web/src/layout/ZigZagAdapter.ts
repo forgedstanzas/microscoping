@@ -1,4 +1,4 @@
-import type { TimelineNode, NodeTone } from '../types/timeline';
+import type { TimelineNode } from '../types/timeline';
 import type { DimensionMap, LayoutMap } from './LinearAdapter'; // Reusing types from LinearAdapter
 import type { ViewSettings } from '../types/settings';
 

@@ -150,8 +150,8 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
             className={`${styles.peerItem} ${peer.id === String(hostId) ? styles.isHost : ''} ${peer.id === String(currentLens) ? styles.isLens : ''}`}
           >
             {peer.username}
-            {peer.id === hostId && ' (Host)'}
-            {peer.id === currentLens && ' (Lens)'}
+            {peer.id === String(hostId) && ' (Host)'}
+            {peer.id === String(currentLens) && ' (Lens)'}
           </li>
         ))}
         {peerOptions.length === 0 && <li>Only you are connected.</li>}
