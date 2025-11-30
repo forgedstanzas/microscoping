@@ -48,6 +48,16 @@
 
   /* Period Track color */
   --period-track-color: #666;
+
+  /* Legacy Thread colors */
+  --legacy-color-1: #e6194B; /* Red */
+  --legacy-color-2: #3cb44b; /* Green */
+  --legacy-color-3: #4363d8; /* Blue */
+  --legacy-color-4: #f58231; /* Orange */
+  --legacy-color-5: #911eb4; /* Purple */
+  --legacy-color-6: #42d4f4; /* Cyan */
+  --legacy-color-7: #f032e6; /* Magenta */
+  --legacy-color-8: #fabed4; /* Pink */
 }
 
 [data-theme="dark"] {

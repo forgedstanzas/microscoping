@@ -68,4 +68,36 @@ export class TurnService {
     });
     return true;
   }
+
+  /**
+   * Determines the next player in the turn order.
+   * The order is determined by sorting peer IDs numerically.
+   * @returns The peer ID of the next player in the sequence. Returns null if no players are available.
+   */
+  public getNextPlayerInTurn(): number | null {
+    const connectedPeerIds = Array.from(this.awareness.getStates().keys()).sort((a, b) => a - b);
+    
+    if (connectedPeerIds.length === 0) {
+      return null;
+    }
+
+    if (connectedPeerIds.length === 1) {
+      return connectedPeerIds[0];
+    }
+
+    const currentPlayerId = this.activePlayerId;
+    if (currentPlayerId === null) {
+      // If there's no active player, default to the first player in the sorted list.
+      return connectedPeerIds[0];
+    }
+
+    const currentIndex = connectedPeerIds.indexOf(currentPlayerId);
+    if (currentIndex === -1) {
+      // If the active player is not in the list (e.g., they disconnected), default to the first player.
+      return connectedPeerIds[0];
+    }
+
+    const nextIndex = (currentIndex + 1) % connectedPeerIds.length;
+    return connectedPeerIds[nextIndex];
+  }
 }

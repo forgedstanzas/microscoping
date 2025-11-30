@@ -24,16 +24,25 @@ const THREAD_CONFIG = {
   slotSize: 15, // Vertical pixels per slot on the node's edge
 };
 
+const LEGACY_COLORS = [
+  '--legacy-color-1',
+  '--legacy-color-2',
+  '--legacy-color-3',
+  '--legacy-color-4',
+  '--legacy-color-5',
+  '--legacy-color-6',
+  '--legacy-color-7',
+  '--legacy-color-8',
+];
+
 /**
- * Generates a color from a string. Used to give each tag a consistent color.
+ * Generates a color from a string by picking from a predefined list of CSS variables.
+ * This ensures each tag gets a consistent, contrasting color.
  */
 function tagToColor(tag: string): string {
   const hash = stringHash(tag);
-  // Simple hashing to HSL values for pleasant, non-clashing colors
-  const hue = hash % 360;
-  const saturation = 70;
-  const lightness = 50;
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const colorIndex = hash % LEGACY_COLORS.length;
+  return `var(${LEGACY_COLORS[colorIndex]})`;
 }
 
 export function LegacyOverlay({ nodes, layout, selectedLegacy }: LegacyOverlayProps) {

@@ -50,9 +50,14 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
   }, [peers]);
 
   React.useEffect(() => {
-    // Reset selected peer when turn changes or peers change
-    setSelectedPeerToPassTurn(null);
-  }, [activePlayerId, peerOptions]);
+    // When the turn changes or peers change, pre-select the next player in the dropdown.
+    if (iHaveTheTurn && peerOptions.length > 1 && services.turnService) {
+        const nextPlayerId = services.turnService.getNextPlayerInTurn();
+        setSelectedPeerToPassTurn(nextPlayerId);
+    } else {
+        setSelectedPeerToPassTurn(null);
+    }
+  }, [activePlayerId, peerOptions, iHaveTheTurn, services.turnService]);
 
   const handlePassTurn = () => {
     if (selectedPeerToPassTurn !== null) {
@@ -163,10 +168,10 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
         {peerOptions.map(peer => (
           <li 
             key={peer.id} 
-            className={`${styles.peerItem} ${peer.id === hostId ? styles.isHost : ''} ${peer.id === activePlayerId ? styles.isLens : ''}`}
+            className={`${styles.peerItem} ${peer.id === activePlayerId ? styles.isLens : ''}`}
           >
             {peer.username}
-            {peer.id === String(hostId) && ' (Host)'}
+            {peer.id === hostId && ' (Host)'}
             {peer.id === activePlayerId && ' (Lens)'}
           </li>
         ))}

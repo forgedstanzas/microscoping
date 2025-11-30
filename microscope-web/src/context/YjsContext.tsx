@@ -128,34 +128,47 @@ export function YjsProvider({ children }: YjsProviderProps) {
     }
   }, [isSynced, roomId, meta]);
 
-  // Effect to handle host election
+  // Effect to handle host election and turn management for disconnected players
   useEffect(() => {
     if (isSynced && services && myPeerId !== null && meta && peers) {
-      const handleElection = () => {
+      const handleStateChecks = () => {
         const currentHostId = meta.get(META_KEYS.HOST_ID) as number | undefined;
-        const connectedPeerIds = Array.from(peers.keys());
+        const activePlayerId = meta.get(META_KEYS.ACTIVE_PLAYER_ID) as number | undefined;
+        const connectedPeerIds = Array.from(peers.keys()).map(id => parseInt(id, 10));
 
-        if (currentHostId === undefined || !connectedPeerIds.includes(String(currentHostId))) {
-          const candidateIds = connectedPeerIds.map(id => parseInt(id, 10));
-          // Ensure my own ID is in the running if I'm not in the peers list yet
-          if (!candidateIds.includes(myPeerId)) {
-            candidateIds.push(myPeerId);
+        // Only the host should perform these checks to avoid conflicts
+        const amHost = myPeerId === currentHostId;
+
+        // 1. Host election logic: if host is disconnected, a new one is elected.
+        if (currentHostId === undefined || !connectedPeerIds.includes(currentHostId)) {
+          // Add self to candidate list if not already present
+          if (!connectedPeerIds.includes(myPeerId)) {
+            connectedPeerIds.push(myPeerId);
           }
-          
-          const newHostId = Math.min(...candidateIds);
-
+          const newHostId = Math.min(...connectedPeerIds);
+          // Only the peer with the lowest ID becomes the new host
           if (myPeerId === newHostId && currentHostId !== newHostId) {
-            console.log(`YjsProvider: Host ${currentHostId} not found. Electing new host: ${newHostId}`);
+            console.log(`[YjsProvider] Host ${currentHostId} not found. Electing new host: ${newHostId}`);
             services.nodeService.setHostId(newHostId);
+          }
+        }
+        
+        // 2. Turn re-assignment logic: if active player disconnects, host re-assigns turn.
+        if (amHost && activePlayerId !== undefined && !connectedPeerIds.includes(activePlayerId)) {
+          console.log(`[YjsProvider] Active player ${activePlayerId} has disconnected. Host is re-assigning turn.`);
+          const nextPlayerId = services.turnService.getNextPlayerInTurn();
+          if (nextPlayerId !== null) {
+            // Directly set the meta key, bypassing normal turn-passing rules.
+            services.nodeService.setActivePlayerId(nextPlayerId);
           }
         }
       };
 
-      peers.observe(handleElection);
-      handleElection(); // Initial check
+      peers.observe(handleStateChecks);
+      handleStateChecks(); // Initial check
 
       return () => {
-        peers.unobserve(handleElection);
+        peers.unobserve(handleStateChecks);
       };
     }
   }, [isSynced, services, myPeerId, meta, peers]);

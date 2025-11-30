@@ -16,6 +16,7 @@ export const useYjs = (roomId: string | null) => {
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [meta, setMeta] = useState<Y.Map<any> | null>(null);
   const [peers, setPeers] = useState<Y.Map<any> | null>(null);
+  const [provider, setProvider] = useState<WebrtcProvider | null>(null);
   const [isSynced, setIsSynced] = useState(false);
   const [myPeerId, setMyPeerId] = useState<number | null>(null);
   const [signalingStatus, setSignalingStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
@@ -25,12 +26,12 @@ export const useYjs = (roomId: string | null) => {
   });
 
   useEffect(() => {
-    // Persist username whenever it changes
     localStorage.setItem('microscope-username', myUsername);
   }, [myUsername]);
 
+  // Main effect for setting up and tearing down the Yjs connection.
+  // This should only depend on the roomId.
   useEffect(() => {
-    // If there's no room, destroy any existing connection and reset state.
     if (!roomId) {
       ydoc?.destroy();
       setYdoc(null);
@@ -47,75 +48,74 @@ export const useYjs = (roomId: string | null) => {
       signaling: ['https://microscoping-signaling-server.onrender.com/'],
     });
 
-    // --- State Updates ---
     setYdoc(newYDoc);
     setMeta(newMeta);
     setPeers(newPeers);
+    setProvider(webrtcProvider);
     setMyPeerId(webrtcProvider.awareness.clientID);
     
-    // --- Event Handlers ---
     const handleSignalingStatus = ({ connected }: { connected: boolean }) => {
       const status = connected ? 'connected' : 'disconnected';
       console.log(`Signaling status changed: ${status}`);
       setSignalingStatus(status);
     };
 
-    const handleSync = ({ synced }: { synced: boolean }) => {
+    const handlePersistenceSync = ({ synced }: { synced: boolean }) => {
       if (synced) {
         setIsSynced(true);
-        const currentDocSize = newYDoc.getMap('nodes').size;
-        console.log(`useYjs: Synced with IndexedDB for room: ${roomId}. Document size is now: ${currentDocSize}`);
-        webrtcProvider.awareness.setLocalStateField('user', { name: myUsername });
+        console.log(`useYjs: Synced with IndexedDB for room: ${roomId}.`);
       }
     };
-
+    
     const handleAwarenessChange = (changes: { added: number[], updated: number[], removed: number[] }) => {
       const states = webrtcProvider.awareness.getStates();
       newYDoc.transact(() => {
         changes.added.forEach(clientId => {
           const userState = states.get(clientId)?.user;
-          if (userState) { newPeers.set(String(clientId), userState); }
+          if (userState) newPeers.set(String(clientId), userState);
         });
         changes.updated.forEach(clientId => {
           const userState = states.get(clientId)?.user;
-          if (userState) { newPeers.set(String(clientId), userState); }
+          if (userState) newPeers.set(String(clientId), userState);
         });
         changes.removed.forEach(clientId => {
           newPeers.delete(String(clientId));
         });
       });
-      console.log(`useYjs: Awareness change detected. Found ${states.size} total peers. Current peers map:`, Object.fromEntries(newPeers.entries()));
     };
 
-    // --- Attach Handlers ---
     webrtcProvider.on('status', handleSignalingStatus);
-    persistence.on('synced', handleSync);
-    if (persistence.synced) {
-      handleSync({ synced: true });
-    }
+    persistence.on('synced', handlePersistenceSync);
     webrtcProvider.awareness.on('change', handleAwarenessChange);
-          handleAwarenessChange({ added: Array.from(webrtcProvider.awareness.getStates().keys()), updated: [], removed: [] });
     
-        webrtcProvider.on('synced', ({ synced }: { synced: boolean }) => {
-          if (synced) {
-            console.log(`useYjs: WebRTC provider has synced for room: ${roomId}.`);
-          }
-        });
-    
-        // --- Cleanup Effect ---
-        return () => {      console.log(`Y.js: Destroying instance for room: ${roomId}`);
+    // Immediately check sync status and awareness
+    if (persistence.synced) {
+      handlePersistenceSync({ synced: true });
+    }
+    handleAwarenessChange({ added: Array.from(webrtcProvider.awareness.getStates().keys()), updated: [], removed: [] });
+
+    return () => {
+      console.log(`Y.js: Destroying instance for room: ${roomId}`);
       webrtcProvider.destroy();
       persistence.destroy();
       newYDoc.destroy();
       
-      // Reset all state
       setYdoc(null);
       setMeta(null);
       setPeers(null);
+      setProvider(null);
       setIsSynced(false);
       setMyPeerId(null);
     };
-  }, [roomId, myUsername]);
+  }, [roomId]);
 
-  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus };
+  // Effect to update user awareness data when username or provider changes.
+  useEffect(() => {
+    if (provider && myUsername && isSynced) {
+      provider.awareness.setLocalStateField('user', { name: myUsername });
+      console.log(`useYjs: Awareness username updated to: ${myUsername}`);
+    }
+  }, [myUsername, provider, isSynced]);
+
+  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus, awareness: provider?.awareness };
 };

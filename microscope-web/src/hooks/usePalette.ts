@@ -8,9 +8,12 @@ import * as Y from 'yjs';
  * @param ydoc The Y.js document to connect to.
  * @returns An object containing the live lists of words and functions to modify them.
  */
-export const usePalette = (ydoc: Y.Doc) => {
-  // Use useMemo to get stable references to the Y.Arrays.
+export const usePalette = (ydoc: Y.Doc | null) => {
+  // Use useMemo to get stable references to the Y.Arrays, only if ydoc is available.
   const { yAffirmedWords, yBannedWords } = useMemo(() => {
+    if (!ydoc) {
+      return { yAffirmedWords: null, yBannedWords: null };
+    }
     const paletteMap = ydoc.getMap('palette');
     if (!paletteMap.has('affirmedWords')) {
       paletteMap.set('affirmedWords', new Y.Array<string>());
@@ -23,10 +26,17 @@ export const usePalette = (ydoc: Y.Doc) => {
     return { yAffirmedWords: yAffirmed, yBannedWords: yBanned };
   }, [ydoc]);
 
-  const [affirmedWords, setAffirmedWords] = useState<string[]>(() => yAffirmedWords.toArray());
-  const [bannedWords, setBannedWords] = useState<string[]>(() => yBannedWords.toArray());
+  const [affirmedWords, setAffirmedWords] = useState<string[]>([]);
+  const [bannedWords, setBannedWords] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!yAffirmedWords || !yBannedWords) {
+      // If the Y.Arrays aren't available, ensure the state is empty.
+      setAffirmedWords([]);
+      setBannedWords([]);
+      return;
+    }
+
     const handleAffirmedChange = () => setAffirmedWords(yAffirmedWords.toArray());
     const handleBannedChange = () => setBannedWords(yBannedWords.toArray());
 
@@ -44,7 +54,7 @@ export const usePalette = (ydoc: Y.Doc) => {
   }, [yAffirmedWords, yBannedWords]);
 
   const addAffirmedWord = useCallback((word: string) => {
-    if (word && !yAffirmedWords.toArray().includes(word)) {
+    if (word && ydoc && yAffirmedWords && !yAffirmedWords.toArray().includes(word)) {
       ydoc.transact(() => {
         yAffirmedWords.push([word]);
       });
@@ -52,16 +62,18 @@ export const usePalette = (ydoc: Y.Doc) => {
   }, [ydoc, yAffirmedWords]);
 
   const removeAffirmedWord = useCallback((word: string) => {
-    const index = yAffirmedWords.toArray().indexOf(word);
-    if (index > -1) {
-      ydoc.transact(() => {
-        yAffirmedWords.delete(index, 1);
-      });
+    if (ydoc && yAffirmedWords) {
+      const index = yAffirmedWords.toArray().indexOf(word);
+      if (index > -1) {
+        ydoc.transact(() => {
+          yAffirmedWords.delete(index, 1);
+        });
+      }
     }
   }, [ydoc, yAffirmedWords]);
 
   const addBannedWord = useCallback((word: string) => {
-    if (word && !yBannedWords.toArray().includes(word)) {
+    if (word && ydoc && yBannedWords && !yBannedWords.toArray().includes(word)) {
       ydoc.transact(() => {
         yBannedWords.push([word]);
       });
@@ -69,11 +81,13 @@ export const usePalette = (ydoc: Y.Doc) => {
   }, [ydoc, yBannedWords]);
 
   const removeBannedWord = useCallback((word: string) => {
-    const index = yBannedWords.toArray().indexOf(word);
-    if (index > -1) {
-      ydoc.transact(() => {
-        yBannedWords.delete(index, 1);
-      });
+    if (ydoc && yBannedWords) {
+      const index = yBannedWords.toArray().indexOf(word);
+      if (index > -1) {
+        ydoc.transact(() => {
+          yBannedWords.delete(index, 1);
+        });
+      }
     }
   }, [ydoc, yBannedWords]);
 
