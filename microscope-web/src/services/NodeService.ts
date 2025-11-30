@@ -13,16 +13,19 @@ export default class NodeService {
   private ydoc: Y.Doc;
   private nodesMap: Y.Map<TimelineNode>;
   private metaMap: Y.Map<any>;
+  private _peerId: number; // Store the current peer's ID
   private tagObserver: (event: Y.YMapEvent<TimelineNode>) => void;
   private isDestroyed = false;
 
   /**
    * @param ydoc The Y.js document to operate on.
+   * @param peerId The ID of the current peer.
    */
-  constructor(ydoc: Y.Doc) {
+  constructor(ydoc: Y.Doc, peerId: number) {
     this.ydoc = ydoc;
     this.nodesMap = ydoc.getMap<TimelineNode>('nodes');
     this.metaMap = ydoc.getMap<any>('meta');
+    this._peerId = peerId;
 
     // Background tag synchronization observer
     this.tagObserver = (event: Y.YMapEvent<TimelineNode>) => {
@@ -46,6 +49,18 @@ export default class NodeService {
   }
   
   /**
+   * Helper to check if the current peer has permission to edit.
+   * @returns true if no active player is set (free-for-all) or if the current peer is the active player.
+   */
+  private _canEdit(): boolean {
+    const activePlayerId = this.metaMap.get(META_KEYS.ACTIVE_PLAYER_ID) as number | null;
+    if (activePlayerId === null || activePlayerId === undefined) {
+      return true; // Free-for-all mode if no active player is set
+    }
+    return activePlayerId === this._peerId;
+  }
+  
+  /**
    * Cleans up the observers attached by this service instance.
    */
   public destroy() {
@@ -61,7 +76,12 @@ export default class NodeService {
    */
   public addNode(
     props: Partial<Omit<TimelineNode, 'id'>> & { type: NodeType; title: string }
-  ): TimelineNode {
+  ): TimelineNode | undefined { // Changed return type to include undefined
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to add node. Not the active player.');
+      return undefined;
+    }
+
     const defaults: Omit<TimelineNode, 'id' | 'type' | 'title'> = {
       parentId: null,
       description: '',
@@ -93,6 +113,11 @@ export default class NodeService {
    * @param fields An object with the fields to update.
    */
   public updateNode(nodeId: string, fields: Partial<TimelineNode>) {
+    if (!this._canEdit()) {
+      console.warn(`NodeService: Not allowed to update node ${nodeId}. Not the active player.`);
+      return;
+    }
+
     const existingNode = this.nodesMap.get(nodeId);
 
     if (existingNode) {
@@ -114,6 +139,11 @@ export default class NodeService {
    * @param nodeId The ID of the node to delete.
    */
   public deleteNode(nodeId: string) {
+    if (!this._canEdit()) {
+      console.warn(`NodeService: Not allowed to delete node ${nodeId}. Not the active player.`);
+      return;
+    }
+
     const nodeToDelete = this.nodesMap.get(nodeId);
 
     if (!nodeToDelete) {
@@ -173,6 +203,11 @@ export default class NodeService {
    * @returns The newly created TimelineNode, or undefined if insertion fails.
    */
   public insertPeriodBetween(prevPeriodId: string, nextPeriodId: string): TimelineNode | undefined {
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to insert period. Not the active player.');
+      return undefined;
+    }
+
     const prevPeriod = this.nodesMap.get(prevPeriodId);
     const nextPeriod = this.nodesMap.get(nextPeriodId);
 
@@ -200,6 +235,11 @@ export default class NodeService {
    * @returns The newly created TimelineNode, or undefined if insertion fails.
    */
   public insertEventBetween(prevNodeId: string, nextNodeId: string): TimelineNode | undefined {
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to insert event. Not the active player.');
+      return undefined;
+    }
+
     const prevNode = this.nodesMap.get(prevNodeId);
     const nextNode = this.nodesMap.get(nextNodeId);
 
@@ -234,6 +274,11 @@ export default class NodeService {
    * @returns The newly created TimelineNode, or undefined if creation fails.
    */
   public addEventToPeriod(parentId: string): TimelineNode | undefined {
+    if (!this._canEdit()) {
+      console.warn(`NodeService: Not allowed to add event to period ${parentId}. Not the active player.`);
+      return undefined;
+    }
+
     const parentPeriod = this.nodesMap.get(parentId);
 
     if (!parentPeriod || parentPeriod.type !== 'period') {
@@ -270,6 +315,10 @@ export default class NodeService {
    * Updates the history title in the meta map.
    */
   public setHistoryTitle(title: string) {
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to set history title. Not the active player.');
+      return;
+    }
     this.metaMap.set(META_KEYS.HISTORY_TITLE, title);
   }
 
@@ -277,6 +326,10 @@ export default class NodeService {
    * Updates the current focus in the meta map.
    */
   public setCurrentFocus(focus: string) {
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to set current focus. Not the active player.');
+      return;
+    }
     this.metaMap.set(META_KEYS.CURRENT_FOCUS, focus);
   }
 
@@ -291,6 +344,10 @@ export default class NodeService {
    * Updates the strict mode flag in the meta map.
    */
   public setIsStrictMode(isStrict: boolean) {
+    if (!this._canEdit()) {
+      console.warn('NodeService: Not allowed to set strict mode. Not the active player.');
+      return;
+    }
     this.metaMap.set(META_KEYS.IS_STRICT_MODE, isStrict);
   }
 

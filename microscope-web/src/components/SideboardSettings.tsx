@@ -14,15 +14,19 @@ interface SideboardSettingsProps {
 }
 
 export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
-  const { services, peers } = useYjsContext();
+  const { services, peers, myPeerId } = useYjsContext(); // Added myPeerId
   const { hostId, activePlayerId } = useMeta();
   const { layoutMode, setLayoutMode } = useUIState();
   const { applySettings, resetSettings, shareSettings } = viewSettings;
   const { showAlert, showConfirm } = useModal();
+  const [selectedPeerToPassTurn, setSelectedPeerToPassTurn] = React.useState<number | null>(null); // State for selected peer
 
   // --- Peer List Logic ---
-  const [peerOptions, setPeerOptions] = React.useState<Array<{id: string, username: string}>>([]);
-  const currentLens = activePlayerId || '';
+  const [peerOptions, setPeerOptions] = React.useState<Array<{id: number, username: string}>>([]); // Changed id to number
+  
+  const currentLensPeer = peerOptions.find(peer => peer.id === activePlayerId);
+  const currentLensUsername = currentLensPeer ? currentLensPeer.username : 'N/A';
+  const iHaveTheTurn = myPeerId === activePlayerId;
 
   React.useEffect(() => {
     if (!peers) return;
@@ -30,7 +34,7 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
     const updatePeerOptions = () => {
       const options = Array.from(peers.entries())
         .map(([peerId, peerData]) => ({
-          id: peerId,
+          id: parseInt(peerId), // Parse peerId to number
           username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
         }))
         .sort((a, b) => a.username.localeCompare(b.username));
@@ -44,6 +48,17 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
       peers.unobserve(updatePeerOptions);
     };
   }, [peers]);
+
+  React.useEffect(() => {
+    // Reset selected peer when turn changes or peers change
+    setSelectedPeerToPassTurn(null);
+  }, [activePlayerId, peerOptions]);
+
+  const handlePassTurn = () => {
+    if (selectedPeerToPassTurn !== null) {
+      services.turnService.passTurn(selectedPeerToPassTurn);
+    }
+  };
   // --- End Peer List Logic ---
 
   const handleExportClick = () => {
@@ -143,19 +158,48 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
       <hr className={styles.divider} />
 
       <h3>Connected Peers</h3>
+      <p>Current Turn: <strong>{currentLensUsername}</strong> {iHaveTheTurn && '(You)'}</p>
       <ul className={styles.peerList}>
         {peerOptions.map(peer => (
           <li 
             key={peer.id} 
-            className={`${styles.peerItem} ${peer.id === String(hostId) ? styles.isHost : ''} ${peer.id === String(currentLens) ? styles.isLens : ''}`}
+            className={`${styles.peerItem} ${peer.id === hostId ? styles.isHost : ''} ${peer.id === activePlayerId ? styles.isLens : ''}`}
           >
             {peer.username}
             {peer.id === String(hostId) && ' (Host)'}
-            {peer.id === String(currentLens) && ' (Lens)'}
+            {peer.id === activePlayerId && ' (Lens)'}
           </li>
         ))}
         {peerOptions.length === 0 && <li>Only you are connected.</li>}
       </ul>
+
+      {iHaveTheTurn && peerOptions.length > 1 && (
+        <div className={styles.passTurnSection}>
+          <h4>Pass Turn To:</h4>
+          <select 
+            className={styles.select}
+            value={selectedPeerToPassTurn || ''}
+            onChange={(e) => setSelectedPeerToPassTurn(parseInt(e.target.value))}
+          >
+            {/* Default option if no peer is selected, or if the current peer is the only one */}
+            <option value="" disabled>Select a peer</option>
+            {peerOptions
+              .filter(peer => peer.id !== myPeerId)
+              .map(peer => (
+                <option key={peer.id} value={peer.id}>
+                  {peer.username}
+                </option>
+              ))}
+          </select>
+          <button 
+            className={styles.button}
+            onClick={handlePassTurn}
+            disabled={!selectedPeerToPassTurn} // Disable if no peer is selected
+          >
+            Pass Turn
+          </button>
+        </div>
+      )}
     </div>
   );
 }
