@@ -38,7 +38,7 @@ export function YjsProvider({ children }: YjsProviderProps) {
 
   const onJoinRoom = (id: string, title?: string) => {
     console.log(`YjsProvider: Attempting to join room '${id}' with initial title: '${title || 'none'}'`);
-    setInitialSessionTitle(title || null);
+    setInitialSessionTitle(title !== undefined ? title : null);
     setRoomIdInternal(id);
   };
   
