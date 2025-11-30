@@ -1,7 +1,7 @@
 import type { TimelineNode } from '../types/timeline';
 import styles from './TimelineNode.module.css';
 import clsx from 'clsx';
-import { useRef, memo, useCallback, useMemo } from 'react';
+import { useRef, memo, useMemo } from 'react';
 import { HighlightableText } from './HighlightableText';
 import { debounce } from '../utils/debounce';
 import { useModal } from '../context/ModalContext';

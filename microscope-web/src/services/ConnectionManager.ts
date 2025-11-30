@@ -1,4 +1,4 @@
-import { generate, count } from 'random-words';
+import { generate } from 'random-words';
 
 /**
  * This service handles creating, joining, and managing room connections.

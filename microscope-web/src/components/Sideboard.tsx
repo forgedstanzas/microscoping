@@ -19,7 +19,7 @@ interface SideboardProps {
 const SECTIONS_IN_PRIORITY = ['meta', 'palette', 'legacies'];
 
 export function Sideboard({ palette, viewSettings }: SideboardProps) {
-  const { ydoc, yjsState } = useYjsContext();
+  useYjsContext();
   const { layoutMode, setLayoutMode, selectedLegacy, setSelectedLegacy } = useUIState();
   const sideboardRef = useRef<HTMLDivElement>(null);
   const [sideboardHeight, setSideboardHeight] = useState(0);
@@ -30,7 +30,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
 
 
   // --- Measurement Phase ---
-  const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
     meta: useRef<HTMLDivElement>(null),
     palette: useRef<HTMLDivElement>(null),
     legacies: useRef<HTMLDivElement>(null),
@@ -139,7 +139,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
           currentTabs.push({ id: 'palette', title: 'Palette', content: <SideboardPalette palette={palette} isCollapsed={isPaletteCollapsed} setIsCollapsed={setIsPaletteCollapsed} isPeelOff={true} /> });
           break;
         case 'legacies':
-          currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={true} /> });
+          currentTabs.push({ id: 'legacies', title: 'Legacies', content: <SideboardLegacies isCollapsed={isLegaciesCollapsed} setIsCollapsed={setIsLegaciesCollapsed} isPeelOff={true} /> });
           break;
       }
     });
@@ -147,7 +147,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     currentTabs.push({ 
       id: 'settings', 
       title: 'Settings', 
-      content: <SideboardSettings layoutMode={layoutMode} onLayoutChange={setLayoutMode} viewSettings={viewSettings} /> 
+      content: <SideboardSettings viewSettings={viewSettings} /> 
     });
 
     return currentTabs;
@@ -157,8 +157,8 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
   const measurementBox = (
     <div className={styles.measurementBox}>
       <div ref={sectionRefs.meta}><MetadataTab isMetadataCollapsed={false} setIsMetadataCollapsed={() => {}} isPeelOff={false} /></div>
-      <div ref={sectionRefs.palette}><SideboardPalette palette={palette} /></div>
-      <div ref={sectionRefs.legacies}><SideboardLegacies selectedLegacy={selectedLegacy} onLegacySelect={setSelectedLegacy} isCollapsed={false} setIsCollapsed={() => {}} isPeelOff={false} /></div>
+      <div ref={sectionRefs.palette}><SideboardPalette palette={palette} isCollapsed={false} setIsCollapsed={() => {}} isPeelOff={false} /></div>
+      <div ref={sectionRefs.legacies}><SideboardLegacies isCollapsed={false} setIsCollapsed={() => {}} isPeelOff={false} /></div>
     </div>
   );
 

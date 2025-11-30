@@ -3,13 +3,11 @@ import { ViewSettingsService } from '../services/ViewSettingsService';
 import ThemeSwitcher from './ThemeSwitcher';
 import { LayoutSwitcher } from './LayoutSwitcher';
 import styles from './SideboardSettings.module.css';
-import type { ViewSettings } from '../types/settings';
 import { useViewSettings } from '../hooks/useViewSettings';
 import { useModal } from '../context/ModalContext';
 import { useYjsContext } from '../context/YjsContext';
 import { useMeta } from '../hooks/useMeta';
 import { useUIState } from '../context/UIStateContext';
-import { META_KEYS } from '../types/meta';
 
 interface SideboardSettingsProps {
   viewSettings: ReturnType<typeof useViewSettings>;
@@ -149,7 +147,7 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
         {peerOptions.map(peer => (
           <li 
             key={peer.id} 
-            className={`${styles.peerItem} ${peer.id === hostId ? styles.isHost : ''} ${peer.id === currentLens ? styles.isLens : ''}`}
+            className={`${styles.peerItem} ${peer.id === String(hostId) ? styles.isHost : ''} ${peer.id === String(currentLens) ? styles.isLens : ''}`}
           >
             {peer.username}
             {peer.id === hostId && ' (Host)'}

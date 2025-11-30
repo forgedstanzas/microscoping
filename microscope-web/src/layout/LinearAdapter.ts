@@ -23,7 +23,7 @@ export type LayoutMap = Map<string, { x: number; y: number; width: number; heigh
 export function calculateLayout(
   nodes: TimelineNode[],
   dimensions: DimensionMap,
-  layoutConstants: ViewSettings['layout']['constants']
+  layoutConstants: ViewSettings['layout']['constants'] | undefined
 ): LayoutMap {
   const layoutMap: LayoutMap = new Map();
   if (nodes.length === 0 || dimensions.size === 0) {
@@ -37,7 +37,8 @@ export function calculateLayout(
   const SCENE_INDENTATION = layoutConstants?.gapSize ? layoutConstants.gapSize / 2 : 50;
 
   // 1. Build the tree structure
-  const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
+  const nodeMap = new Map<string, NodeWithChildren>();
+  nodes.forEach(node => nodeMap.set(node.id, { ...node, children: [] }));
   const tree: NodeWithChildren[] = [];
 
   nodes.forEach(node => {
@@ -73,32 +74,20 @@ export function calculateLayout(
       height: periodDims.height,
     });
 
-    // Determine the event layout direction for this specific period
-    const currentPeriodEventLayoutDirection =
-      period.tone === 'light'
-        ? layoutConstants?.eventLayoutLightPeriod ?? 'below' // Default for linear light is 'below'
-        : layoutConstants?.eventLayoutDarkPeriod ?? 'below'; // Default for linear dark is 'below'
-
-    // Accumulators for events and scenes relative to the period
-    let eventsAboveCurrentY = 0; // Tracks the lowest point of content stacked above the period (most negative Y)
-    let eventsBelowCurrentY = periodDims.height; // Tracks the highest point of content stacked below the period (most positive Y)
+    // Accumulator for events and scenes relative to the period.
+    // In linear mode, events and scenes always stack downwards from the period.
+    let eventsBelowCurrentY = periodDims.height; // Tracks the Y-coordinate for the next element below the period.
 
     // Layout Events and their nested Scenes
     period.children.forEach(event => {
       if (event.type !== 'event') return; // Only process events for now
 
       const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
-      let eventLayoutY;
       const eventX = currentX + (periodDims.width - eventDims.width) / 2; // Center event under period
 
-      if (currentPeriodEventLayoutDirection === 'above') {
-        eventsAboveCurrentY -= (GAP_VERTICAL + eventDims.height);
-        eventLayoutY = eventsAboveCurrentY;
-      } else { // 'below'
-        eventLayoutY = eventsBelowCurrentY + GAP_VERTICAL;
-        eventsBelowCurrentY = eventLayoutY + eventDims.height;
-      }
-
+      // Calculate Y position, always below the period.
+      const eventLayoutY = eventsBelowCurrentY + GAP_VERTICAL;
+      
       layoutMap.set(event.id, {
         x: eventX,
         y: eventLayoutY,
@@ -106,8 +95,9 @@ export function calculateLayout(
         height: eventDims.height,
       });
 
-      // Layout Scenes nested under this Event (always below their parent event)
+      // Start the scene accumulator below the current event.
       let sceneYAccumulator = eventLayoutY + eventDims.height + GAP_VERTICAL;
+
       event.children.forEach(scene => {
         if (scene.type !== 'scene') return;
         const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
@@ -119,12 +109,9 @@ export function calculateLayout(
         });
         sceneYAccumulator += sceneDims.height + GAP_VERTICAL;
       });
-
-      // If events were placed below, the scenes will extend further down.
-      // Update eventsBelowCurrentY to account for scenes, if they extend beyond the event itself.
-      if (currentPeriodEventLayoutDirection === 'below' && sceneYAccumulator > eventsBelowCurrentY) {
-        eventsBelowCurrentY = sceneYAccumulator;
-      }
+      
+      // The next item below the period should be placed after all scenes of the current event.
+      eventsBelowCurrentY = sceneYAccumulator - GAP_VERTICAL;
     });
 
     // Advance currentX for the next Period column

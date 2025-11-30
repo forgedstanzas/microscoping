@@ -17,14 +17,14 @@ import { useMeta } from '../hooks/useMeta';
 interface CanvasProps {
   affirmedWords: string[];
   bannedWords: string[];
-  layoutConstants: ViewSettings['layout']['constants'];
+  layoutConstants: ViewSettings['layout']['constants'] | undefined;
 }
 
 export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
-  const { services, myPeerId, peers } = useYjsContext();
+  const { services, myPeerId, peers, ydoc } = useYjsContext();
   const { layoutMode, selectedLegacy } = useUIState();
   const { isStrictMode, activePlayerId } = useMeta();
-  const nodes = useNodes(services.nodeService.ydoc);
+  const nodes = useNodes(ydoc);
   const { layout, measureRef } = useNodeLayout(nodes);
 
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
@@ -93,7 +93,6 @@ export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasPr
     const segments: TrackSegment[] = [];
     const GAP_HORIZONTAL = layoutConstants?.gapSize ?? 50;
     const PERIOD_MARGIN = 34;
-    const totalGap = GAP_HORIZONTAL + PERIOD_MARGIN;
     for (let i = 0; i < periodNodes.length - 1; i++) {
       const prevPeriod = periodNodes[i];
       const nextPeriod = periodNodes[i + 1];

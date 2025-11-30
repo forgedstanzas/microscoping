@@ -3,6 +3,13 @@ import type { DimensionMap, LayoutMap } from './LinearAdapter'; // Reusing types
 import type { ViewSettings } from '../types/settings';
 
 /**
+ * A temporary structure to hold the tree representation of nodes.
+ */
+interface NodeWithChildren extends TimelineNode {
+  children: NodeWithChildren[];
+}
+
+/**
  * Calculates the visual layout for a given list of timeline nodes using a
  * hierarchical (parent/child) zig-zag structure and pre-measured dimensions.
  *
@@ -14,7 +21,7 @@ import type { ViewSettings } from '../types/settings';
 export function calculateLayout(
   nodes: TimelineNode[],
   dimensions: DimensionMap,
-  layoutConstants: ViewSettings['layout']['constants']
+  layoutConstants?: ViewSettings['layout']['constants']
 ): LayoutMap {
   const layoutMap: LayoutMap = new Map();
   if (nodes.length === 0) { // dimensions.size === 0 is not a strict requirement here due to default fallback
@@ -29,7 +36,8 @@ export function calculateLayout(
   const SCENE_INDENTATION = layoutConstants?.gapSize ? layoutConstants.gapSize / 2 : 50; // Use half gapSize for indentation
 
   // 1. Build the tree structure (same as LinearAdapter)
-  const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
+  const nodeMap = new Map<string, NodeWithChildren>();
+  nodes.forEach(node => nodeMap.set(node.id, { ...node, children: [] }));
   const tree: NodeWithChildren[] = [];
 
   nodes.forEach(node => {
@@ -46,10 +54,10 @@ export function calculateLayout(
 
   // Sort nodes at each level by their `order` property
   const sortChildrenRecursive = (node: NodeWithChildren) => {
-    node.children.sort((a, b) => a.order - b.order);
+    node.children.sort((a: NodeWithChildren, b: NodeWithChildren) => a.order - b.order);
     node.children.forEach(sortChildrenRecursive);
   };
-  tree.sort((a, b) => a.order - b.order);
+  tree.sort((a: NodeWithChildren, b: NodeWithChildren) => a.order - b.order);
   tree.forEach(sortChildrenRecursive);
 
   // 2. Calculate positions
@@ -86,7 +94,7 @@ export function calculateLayout(
     // Helper to calculate event group (event + scenes) height
     const getEventGroupTotalHeight = (eventNode: NodeWithChildren): number => {
         let height = (dimensions.get(eventNode.id) || { width: CARD_WIDTH, height: 150 }).height;
-        eventNode.children.forEach(sceneNode => {
+        eventNode.children.forEach((sceneNode: NodeWithChildren) => {
             if (sceneNode.type === 'scene') {
                 height += GAP_VERTICAL + (dimensions.get(sceneNode.id) || { width: CARD_WIDTH, height: 150 }).height;
             }
@@ -97,9 +105,9 @@ export function calculateLayout(
 
     // Layout Events and their nested Scenes
     // Filter out only Event type children for this section.
-    const events = period.children.filter(child => child.type === 'event');
+    const events = period.children.filter((child: NodeWithChildren) => child.type === 'event');
 
-    events.forEach(event => {
+    events.forEach((event: NodeWithChildren) => {
         const eventDims = dimensions.get(event.id) || { width: CARD_WIDTH, height: 150 };
         const eventGroupHeight = getEventGroupTotalHeight(event); // Total height of event + its scenes
         let eventLayoutY; // Final Y for the event itself
@@ -122,7 +130,7 @@ export function calculateLayout(
 
         // Layout Scenes nested under this Event (always below their parent event)
         let sceneYAccumulator = eventLayoutY + eventDims.height + GAP_VERTICAL;
-        event.children.forEach(scene => {
+        event.children.forEach((scene: NodeWithChildren) => {
             if (scene.type !== 'scene') return;
             const sceneDims = dimensions.get(scene.id) || { width: CARD_WIDTH, height: 150 };
             layoutMap.set(scene.id, {

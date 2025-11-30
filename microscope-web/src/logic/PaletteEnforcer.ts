@@ -1,7 +1,7 @@
-import Fuse from 'fuse.js';
+import Fuse, { type IFuseOptions } from 'fuse.js';
 
 // Fuse.js options for fuzzy searching.
-const fuseOptions: Fuse.IFuseOptions<WordWithIndex> = {
+const fuseOptions: IFuseOptions<WordWithIndex> = {
   includeScore: true,
   includeMatches: true,
   findAllMatches: true,

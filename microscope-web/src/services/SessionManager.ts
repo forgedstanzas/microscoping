@@ -87,7 +87,7 @@ export default class SessionManager {
         Object.entries(sessionData.palette).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             const yArray = new Y.Array<string>();
-            yArray.push(...value);
+            yArray.push(value);
             this.paletteMap.set(key, yArray);
           }
         });

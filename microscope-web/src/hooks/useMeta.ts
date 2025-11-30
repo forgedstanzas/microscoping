@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useYjsContext } from '../context/YjsContext';
-import { META_KEYS, type MetaMapSchema } from '../types/meta';
+import { type MetaMapSchema } from '../types/meta';
 
 // Define the shape of the state object returned by the hook
 type MetaState = Partial<MetaMapSchema>;

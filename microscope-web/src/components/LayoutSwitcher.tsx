@@ -1,8 +1,10 @@
-import React from 'react';
+
+
+import type { LayoutMode } from '../context/UIStateContext';
 
 interface LayoutSwitcherProps {
-  currentLayout: string;
-  onLayoutChange: (newLayout: string) => void;
+  currentLayout: LayoutMode;
+  onLayoutChange: (newLayout: LayoutMode) => void;
 }
 
 export function LayoutSwitcher({ currentLayout, onLayoutChange }: LayoutSwitcherProps) {
@@ -12,7 +14,7 @@ export function LayoutSwitcher({ currentLayout, onLayoutChange }: LayoutSwitcher
       <select
         id="layout-select"
         value={currentLayout}
-        onChange={(e) => onLayoutChange(e.target.value)}
+        onChange={(e) => onLayoutChange(e.target.value as LayoutMode)}
       >
         <option value="zigzag">Zig-Zag</option>
         <option value="linear">Linear</option>

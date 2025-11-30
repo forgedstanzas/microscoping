@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from './MetadataTab.module.css';
-import { META_KEYS } from '../types/meta';
 import { useYjsContext } from '../context/YjsContext';
 import { useMeta } from '../hooks/useMeta';
 

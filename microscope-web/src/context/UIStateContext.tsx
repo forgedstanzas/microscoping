@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
 // 1. Define the shape of the context data
-type LayoutMode = 'zigzag' | 'linear';
+export type LayoutMode = 'zigzag' | 'linear';
 
 interface UIStateContextType {
   layoutMode: LayoutMode;

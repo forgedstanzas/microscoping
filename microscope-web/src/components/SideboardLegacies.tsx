@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNodes } from '../hooks/useNodes';
 import styles from './SideboardLegacies.module.css';
 import clsx from 'clsx';

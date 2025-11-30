@@ -5,10 +5,14 @@ import type { ViewSettings } from '../types/settings';
 import { useModal } from '../context/ModalContext'; // Import useModal
 import { META_KEYS } from '../types/meta';
 
-const DEFAULT_LAYOUT_CONSTANTS: Required<ViewSettings['layout']['constants']> = {
+type LayoutConstants = NonNullable<NonNullable<ViewSettings['layout']>['constants']>;
+
+const DEFAULT_LAYOUT_CONSTANTS: Required<LayoutConstants> = {
   cardWidth: 348,
   zigzagOffset: 250,
   gapSize: 50,
+  eventLayoutLightPeriod: 'above',
+  eventLayoutDarkPeriod: 'below',
 };
 
 interface SharedSettingsEvent {
@@ -41,12 +45,12 @@ export const useViewSettings = (ydoc: Y.Doc | null) => {
         newTheme[cssVarName] = value;
       });
       // Store only the successfully applied theme properties
-      setAppliedTheme(prev => ({ ...prev, ...newTheme }));
+      setAppliedTheme((prev: Record<string, string>) => ({ ...prev, ...newTheme }));
     }
 
     // 2. Apply Layout Constants
     if (settings.layout?.constants) {
-      setLayoutConstants(prev => ({ ...prev, ...settings.layout.constants }));
+      setLayoutConstants(prev => ({ ...prev, ...settings.layout!.constants }));
     }
 
     // TODO: Apply layout adapter change if present in settings

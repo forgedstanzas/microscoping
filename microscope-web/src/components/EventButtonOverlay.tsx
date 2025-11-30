@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import styles from './EventButtonOverlay.module.css';
-import NodeService from '../services/NodeService';
 import type { TimelineNode } from '../types/timeline';
 import type { LayoutMap } from '../layout/LinearAdapter';
 import type { ViewSettings } from '../types/settings';
@@ -10,7 +9,7 @@ import { useMeta } from '../hooks/useMeta';
 interface EventButtonOverlayProps {
   nodes: TimelineNode[];
   layout: LayoutMap;
-  layoutConstants: ViewSettings['layout']['constants'];
+  layoutConstants?: ViewSettings['layout']['constants'];
   layoutMode: 'zigzag' | 'linear';
   nodeBorderWidth: number;
 }

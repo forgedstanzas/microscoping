@@ -54,12 +54,13 @@ export const useYjs = (roomId: string | null) => {
     setMyPeerId(webrtcProvider.awareness.clientID);
     
     // --- Event Handlers ---
-    const handleSignalingStatus = (event: { status: 'connected' | 'disconnected' }) => {
-      console.log(`Signaling status changed: ${event.status}`);
-      setSignalingStatus(event.status);
+    const handleSignalingStatus = ({ connected }: { connected: boolean }) => {
+      const status = connected ? 'connected' : 'disconnected';
+      console.log(`Signaling status changed: ${status}`);
+      setSignalingStatus(status);
     };
 
-    const handleSync = (synced: boolean) => {
+    const handleSync = ({ synced }: { synced: boolean }) => {
       if (synced) {
         setIsSynced(true);
         const currentDocSize = newYDoc.getMap('nodes').size;
@@ -90,12 +91,12 @@ export const useYjs = (roomId: string | null) => {
     webrtcProvider.on('status', handleSignalingStatus);
     persistence.on('synced', handleSync);
     if (persistence.synced) {
-      handleSync(true);
+      handleSync({ synced: true });
     }
     webrtcProvider.awareness.on('change', handleAwarenessChange);
           handleAwarenessChange({ added: Array.from(webrtcProvider.awareness.getStates().keys()), updated: [], removed: [] });
     
-        webrtcProvider.on('synced', (synced: boolean) => {
+        webrtcProvider.on('synced', ({ synced }: { synced: boolean }) => {
           if (synced) {
             console.log(`useYjs: WebRTC provider has synced for room: ${roomId}.`);
           }
