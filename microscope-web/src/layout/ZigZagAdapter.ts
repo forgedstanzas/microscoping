@@ -21,7 +21,7 @@ interface NodeWithChildren extends TimelineNode {
 export function calculateLayout(
   nodes: TimelineNode[],
   dimensions: DimensionMap,
-  layoutConstants?: ViewSettings['layout']['constants']
+  layoutConstants: NonNullable<ViewSettings['layout']>['constants']
 ): LayoutMap {
   const layoutMap: LayoutMap = new Map();
   if (nodes.length === 0) { // dimensions.size === 0 is not a strict requirement here due to default fallback

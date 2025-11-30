@@ -23,7 +23,7 @@ export type LayoutMap = Map<string, { x: number; y: number; width: number; heigh
 export function calculateLayout(
   nodes: TimelineNode[],
   dimensions: DimensionMap,
-  layoutConstants: ViewSettings['layout']['constants'] | undefined
+  layoutConstants: NonNullable<ViewSettings['layout']>['constants']
 ): LayoutMap {
   const layoutMap: LayoutMap = new Map();
   if (nodes.length === 0 || dimensions.size === 0) {

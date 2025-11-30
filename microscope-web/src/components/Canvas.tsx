@@ -17,7 +17,7 @@ import { useMeta } from '../hooks/useMeta';
 interface CanvasProps {
   affirmedWords: string[];
   bannedWords: string[];
-  layoutConstants: ViewSettings['layout']['constants'] | undefined;
+  layoutConstants: NonNullable<ViewSettings['layout']>['constants'];
 }
 
 export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {

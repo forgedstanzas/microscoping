@@ -9,7 +9,7 @@ import { useMeta } from '../hooks/useMeta';
 interface EventButtonOverlayProps {
   nodes: TimelineNode[];
   layout: LayoutMap;
-  layoutConstants?: ViewSettings['layout']['constants'];
+  layoutConstants: NonNullable<ViewSettings['layout']>['constants'];
   layoutMode: 'zigzag' | 'linear';
   nodeBorderWidth: number;
 }
