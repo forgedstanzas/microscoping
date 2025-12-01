@@ -235,11 +235,6 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
 
       <h3>About</h3>
       <div className={styles.buttonGroup}>
-        {deferredInstallPrompt && (
-            <button onClick={handleInstallClick} className={styles.button}>
-              Install App
-            </button>
-        )}
         <div className={styles.inlineButtonGroup}>
           <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer" className={styles.button}>
             View on GitHub
@@ -248,6 +243,11 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
             Return to Lobby
           </a>
         </div>
+        {deferredInstallPrompt && (
+            <button onClick={handleInstallClick} className={styles.button}>
+              Install App
+            </button>
+        )}
       </div>
     </div>
   );
