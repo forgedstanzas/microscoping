@@ -96,6 +96,28 @@ function App() {
     };
   }, []);
 
+  // Effect to handle plain text copy from contentEditable elements
+  useEffect(() => {
+    const handlePlainTextCopy = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Check if the copy event originated from within a contentEditable element
+      if (target.closest('[contenteditable="true"]')) {
+        event.preventDefault();
+        const selection = window.getSelection();
+        if (selection && event.clipboardData) {
+          event.clipboardData.setData('text/plain', selection.toString());
+        }
+      }
+    };
+
+    document.addEventListener('copy', handlePlainTextCopy);
+
+    return () => {
+      document.removeEventListener('copy', handlePlainTextCopy);
+    };
+  }, []);
+
   const handleJoinRoom = (id: string, title?: string) => {
     setInitialSessionTitle(title ?? null);
     setRoomId(id);

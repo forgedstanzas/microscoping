@@ -50,16 +50,22 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
       const targetLayout = layout.get(targetNodeForButton.id);
       if (!targetLayout) return; // Should not happen if layout.has(node.id) check is sufficient
 
-      // Determine the default layout direction based on the overall layout mode.
-      const isZigZag = layoutMode === 'zigzag';
-      const eventLayoutLightDefault = isZigZag ? 'above' : 'below';
-      const eventLayoutDarkDefault = 'below';
+      // In linear mode, the button is always below. In zigzag, it depends on tone and overrides.
+      let direction: 'above' | 'below';
 
-      // Use the override from layoutConstants if it exists, otherwise use the calculated default.
-      const direction =
-        targetNodeForButton.tone === 'light'
-          ? layoutConstants?.eventLayoutLightPeriod ?? eventLayoutLightDefault
-          : layoutConstants?.eventLayoutDarkPeriod ?? eventLayoutDarkDefault;
+      if (layoutMode === 'linear') {
+        direction = 'below';
+      } else {
+        // Zig-zag mode's button direction is determined by the TONE OF THE PERIOD.
+        const toneForLayout = period.tone;
+        const eventLayoutLightDefault = 'above';
+        const eventLayoutDarkDefault = 'below';
+        
+        direction =
+          toneForLayout === 'light'
+            ? layoutConstants?.eventLayoutLightPeriod ?? eventLayoutLightDefault
+            : layoutConstants?.eventLayoutDarkPeriod ?? eventLayoutDarkDefault;
+      }
 
       const buttonX = targetLayout.x + targetLayout.width / 2;
       let buttonY;

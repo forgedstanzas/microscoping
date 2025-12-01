@@ -16,12 +16,16 @@ export function SideboardLegacies({ isCollapsed, setIsCollapsed, isPeelOff }: Si
   const { selectedLegacy, setSelectedLegacy } = useUIState();
   const nodes = useNodes(ydoc);
 
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
+  const legaciesWithCounts = useMemo(() => {
+    const tagCounts = new Map<string, number>();
     nodes.forEach(node => {
-      node.tags?.forEach(tag => tagSet.add(tag));
+      node.tags?.forEach(tag => {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      });
     });
-    return Array.from(tagSet).sort();
+    return Array.from(tagCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [nodes]);
 
   const isCollapsible = !isPeelOff;
@@ -36,15 +40,15 @@ export function SideboardLegacies({ isCollapsed, setIsCollapsed, isPeelOff }: Si
       </h3>
       {(!isCollapsed || isPeelOff) && (
         <>
-          {allTags.length > 0 ? (
+          {legaciesWithCounts.length > 0 ? (
             <ul className={styles.legaciesList}>
-              {allTags.map(tag => (
+              {legaciesWithCounts.map(legacy => (
                 <li
-                  key={tag}
-                  className={clsx(styles.legacyItem, { [styles.selected]: tag === selectedLegacy })}
-                  onClick={() => setSelectedLegacy(tag === selectedLegacy ? null : tag)}
+                  key={legacy.name}
+                  className={clsx(styles.legacyItem, { [styles.selected]: legacy.name === selectedLegacy })}
+                  onClick={() => setSelectedLegacy(legacy.name === selectedLegacy ? null : legacy.name)}
                 >
-                  {tag}
+                  {legacy.name} ({legacy.count} {legacy.count === 1 ? 'node' : 'nodes'})
                 </li>
               ))}
             </ul>

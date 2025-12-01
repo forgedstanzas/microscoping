@@ -70,7 +70,7 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
      }
   };
 
-  const isDimmed = !!selectedLegacy && !node.isBookend && !(node.tags || []).includes(selectedLegacy);
+  const isDimmed = !!selectedLegacy && !(node.tags || []).includes(selectedLegacy);
 
   return (
     <div
