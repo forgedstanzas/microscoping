@@ -234,20 +234,16 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
       <hr className={styles.divider} />
 
       <h3>About</h3>
-      <div className={styles.infoGroup}>
+      <div className={styles.buttonGroup}>
         {deferredInstallPrompt && (
-          <>
             <button onClick={handleInstallClick} className={styles.button}>
               Install App
             </button>
-            <br />
-          </>
         )}
-        <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer">
+        <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer" className={styles.button}>
           View on GitHub
         </a>
-        <br />
-        <a href={import.meta.env.BASE_URL}>
+        <a href={import.meta.env.BASE_URL} className={styles.button}>
           Return to Lobby
         </a>
       </div>
