@@ -156,18 +156,6 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
 
       <hr className={styles.divider} />
 
-      {deferredInstallPrompt && (
-        <>
-          <h3>Application</h3>
-          <div className={styles.buttonGroup}>
-            <button onClick={handleInstallClick} className={styles.button}>
-              Install App
-            </button>
-          </div>
-          <hr className={styles.divider} />
-        </>
-      )}
-
       <h3>Session Data</h3>
       <div className={styles.buttonGroup}>
         <button onClick={handleExportClick} className={styles.button}>
@@ -247,6 +235,14 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
 
       <h3>About</h3>
       <div className={styles.infoGroup}>
+        {deferredInstallPrompt && (
+          <>
+            <button onClick={handleInstallClick} className={styles.button}>
+              Install App
+            </button>
+            <br />
+          </>
+        )}
         <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer">
           View on GitHub
         </a>
