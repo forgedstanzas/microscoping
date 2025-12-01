@@ -50,11 +50,11 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
       return;
     };
     const options = Array.from(awareness.getStates().entries())
-      .map(([clientId, clientState]) => ({
+      .map(([clientId, clientState]: [number, Record<string, any>]) => ({
         id: clientId,
-        username: clientState.user?.name || `Guest-${String(clientId).substring(0,4)}`
+        username: (clientState.user?.name as string) || `Guest-${String(clientId).substring(0,4)}`
       }))
-      .sort((a, b) => a.username.localeCompare(b.username));
+      .sort((a: { id: number; username: string }, b: { id: number; username: string }) => a.username.localeCompare(b.username));
     setPeerOptions(options);
   }, [awareness]);
 

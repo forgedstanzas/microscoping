@@ -13,7 +13,7 @@ export default class NodeService {
   private ydoc: Y.Doc;
   private nodesMap: Y.Map<TimelineNode>;
   private metaMap: Y.Map<any>;
-  private _peerId: number; // Store the current peer's ID
+
   private tagObserver: (event: Y.YMapEvent<TimelineNode>) => void;
   private isDestroyed = false;
 
@@ -25,7 +25,7 @@ export default class NodeService {
     this.ydoc = ydoc;
     this.nodesMap = ydoc.getMap<TimelineNode>('nodes');
     this.metaMap = ydoc.getMap<any>('meta');
-    this._peerId = peerId;
+
 
     // Background tag synchronization observer
     this.tagObserver = (event: Y.YMapEvent<TimelineNode>) => {

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc'; // Import WebrtcProvider
 import { useYjs as useYjsHook } from '../hooks/useYjs';
-import { Lobby } from '../components/Lobby';
+
 import NodeService from '../services/NodeService';
 import SessionManager from '../services/SessionManager';
 import { TurnService } from '../services/TurnService'; // Import TurnService
@@ -20,11 +20,13 @@ interface YjsContextType {
   myUsername: string;
   signalingStatus: 'connecting' | 'connected' | 'disconnected';
   meta: Y.Map<any> | null;
-  provider: WebrtcProvider | null; // Add this
+  provider: WebrtcProvider | null;
+  awareness: Y.Awareness | null;
+  peers: Map<number, any>; // Add this line
   services: {
     nodeService: NodeService;
     sessionService: SessionManager;
-    turnService: TurnService; // Add TurnService here
+    turnService: TurnService;
   } | null;
 }
 
@@ -42,7 +44,12 @@ export function YjsProvider({ children, roomId, initialSessionTitle }: YjsProvid
   const { showAlert } = useModal();
   
   const yjsState = useYjsHook(roomId);
-  const { ydoc, isSynced, myPeerId, meta, myUsername, signalingStatus, awareness, provider } = yjsState;
+  const { ydoc, isSynced, myPeerId, meta, signalingStatus, awareness, provider } = yjsState;
+
+  const peers = useMemo(() => {
+    if (!awareness) return new Map();
+    return awareness.getStates();
+  }, [awareness]);
 
   const services = useMemo(() => {
     if (!ydoc || !myPeerId || !awareness) return null; // Ensure awareness is available
@@ -169,12 +176,12 @@ export function YjsProvider({ children, roomId, initialSessionTitle }: YjsProvid
     };
   }, [services]);
   
-  if (!ydoc || !meta || !services) {
+  if (!ydoc || !meta || !services || !awareness) {
     return <div>Loading Session...</div>;
   }
 
   return (
-    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, services, signalingStatus, provider }}>
+    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, services, signalingStatus, provider, awareness, peers }}>
       {children}
     </YjsContext.Provider>
   );
@@ -188,11 +195,13 @@ export function useYjsContext() {
   return context as YjsContextType & {
     ydoc: Y.Doc;
     meta: Y.Map<any>;
-    provider: WebrtcProvider; // And this
+    provider: WebrtcProvider;
+    awareness: Y.Awareness; // Add this
+    peers: Map<number, any>; // Add this
     services: {
       nodeService: NodeService;
       sessionService: SessionManager;
-      turnService: TurnService; // Add TurnService here
+      turnService: TurnService; // Ensure this is present
     };
   };
 }

@@ -21,7 +21,7 @@ interface CanvasProps {
 }
 
 export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
-  const { services, myPeerId, peers, ydoc } = useYjsContext();
+  const { services, myPeerId, peers, ydoc, awareness } = useYjsContext();
   const { layoutMode, selectedLegacy } = useUIState();
   const { isStrictMode, activePlayerId } = useMeta();
   const nodes = useNodes(ydoc);
@@ -35,27 +35,28 @@ export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasPr
   const [activePlayerName, setActivePlayerName] = useState('');
 
   useEffect(() => {
-    if (!peers) return;
+    if (!awareness) return;
 
     const updatePlayerName = () => {
       if (activePlayerId) {
-        const name = peers.get(String(activePlayerId))?.name || `Player ${String(activePlayerId).substring(0, 4)}`;
+        const peerState = awareness.getStates().get(activePlayerId);
+        const name = peerState?.user?.name || `Player ${String(activePlayerId).substring(0, 4)}`;
         setActivePlayerName(name);
       } else {
         setActivePlayerName('');
       }
     };
 
-    // We observe the peers map for any change
-    peers.observe(updatePlayerName);
+    // We observe the awareness object for any change
+    awareness.on('change', updatePlayerName);
     
     // Initial call
     updatePlayerName();
 
     return () => {
-      peers.unobserve(updatePlayerName);
+      awareness.off('change', updatePlayerName);
     };
-  }, [peers, activePlayerId]);
+  }, [awareness, activePlayerId]);
 
   const turnBanner = useMemo(() => {
     if (!isStrictMode) return null;
