@@ -242,6 +242,19 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
           </button>
         </div>
       )}
+
+      <hr className={styles.divider} />
+
+      <h3>About</h3>
+      <div className={styles.infoGroup}>
+        <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer">
+          View on GitHub
+        </a>
+        <br />
+        <a href={import.meta.env.BASE_URL}>
+          Return to Lobby
+        </a>
+      </div>
     </div>
   );
 }

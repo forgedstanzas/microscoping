@@ -102,7 +102,12 @@ function App() {
   };
   
   // A username state is needed for the lobby
-  const [myUsername, setMyUsername] = useState('Guest');
+const generateDefaultUsername = () => {
+  const num = Math.floor(Math.random() * 1000); // 0-999
+  return `Guest-${String(num).padStart(3, '0')}`;
+};
+
+  const [myUsername, setMyUsername] = useState(generateDefaultUsername());
 
   if (!roomId) {
     return <Lobby onJoinRoom={handleJoinRoom} myUsername={myUsername} setMyUsername={setMyUsername} />;
