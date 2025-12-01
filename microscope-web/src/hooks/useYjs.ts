@@ -46,11 +46,6 @@ export const useYjs = (roomId: string | null) => {
     const persistence = new IndexeddbPersistence(roomId, newYDoc);
     const webrtcProvider = new WebrtcProvider(roomId, newYDoc, {
       signaling: ['https://microscoping-signaling-server.onrender.com/'],
-      // Add STUN servers for more reliable peer discovery
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
-      ],
       maxConns: 20, // Set maximum number of connections
       filter: () => true, // Basic filter, can be used for more complex logic
     });
