@@ -6,7 +6,7 @@ import { HighlightableText } from './HighlightableText';
 import { debounce } from '../utils/debounce';
 import { useModal } from '../context/ModalContext';
 import { useYjsContext } from '../context/YjsContext';
-import { useMeta } from '../hooks/useMeta';
+import { useEntitlements } from '../hooks/useEntitlements';
 
 interface TimelineNodeProps {
   node: TimelineNode;
@@ -16,15 +16,12 @@ interface TimelineNodeProps {
 }
 
 function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selectedLegacy }: TimelineNodeProps) {
-  const { services, myPeerId } = useYjsContext();
-  const { isStrictMode, activePlayerId, hostId } = useMeta();
+  const { services } = useYjsContext();
+  const { canEditNodes } = useEntitlements();
   const titleRef = useRef<HTMLDivElement>(null);
   const { showConfirm } = useModal();
 
-  const isHost = myPeerId === hostId;
-  const isMyTurn = myPeerId === activePlayerId;
-  const canEdit = !isStrictMode || isMyTurn || isHost;
-  const isEditable = canEdit;
+  const isEditable = canEditNodes;
 
   const handleToggleTone = () => {
     const newTone = node.tone === 'light' ? 'dark' : 'light';
@@ -84,7 +81,7 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         { [styles.ghost]: node.isGhost },
         { [styles.event]: node.type === 'event' },
         { [styles.dimmed]: isDimmed },
-        { [styles.disabled]: !canEdit }
+        { [styles.disabled]: !canEditNodes }
       )}
       data-node-id={node.id}
     >
@@ -117,10 +114,10 @@ function TimelineNodeComponentInternal({ node, affirmedWords, bannedWords, selec
         />
         
         <div className={styles['button-group']}>
-          <button className={styles.button} onClick={handleToggleTone} disabled={!canEdit}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
-          <button className={styles.button} onClick={handleToggleGhost} disabled={!canEdit}>Ghost</button>
+          <button className={styles.button} onClick={handleToggleTone} disabled={!canEditNodes}>{node.tone === 'light' ? 'Light' : 'Dark'}</button>
+          <button className={styles.button} onClick={handleToggleGhost} disabled={!canEditNodes}>Ghost</button>
           {!node.isBookend && (
-            <button className={styles.button} onClick={handleDelete} disabled={!canEdit}>Delete</button>
+            <button className={styles.button} onClick={handleDelete} disabled={!canEditNodes}>Delete</button>
           )}
         </div>
       </div>

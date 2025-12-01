@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './MetadataTab.module.css';
 import { useYjsContext } from '../context/YjsContext';
 import { useMeta } from '../hooks/useMeta';
+import { useEntitlements } from '../hooks/useEntitlements';
 
 interface MetadataTabProps {
   isMetadataCollapsed: boolean;
@@ -12,6 +13,7 @@ interface MetadataTabProps {
 export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: MetadataTabProps) {
   const { services, myPeerId, myUsername, peers } = useYjsContext();
   const metaState = useMeta();
+  const { isHost, canEditMeta } = useEntitlements();
 
   const {
     hostId,
@@ -20,8 +22,6 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
     activePlayerId = null,
     isStrictMode = false,
   } = metaState;
-  
-  const isHost = hostId === myPeerId;
 
   // Handler for text inputs
   const handleHistoryTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +97,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               value={historyTitle}
               onChange={handleHistoryTitleChange}
               className={styles.textInput}
-              disabled={!isHost}
+              disabled={!canEditMeta}
             />
           </div>
     
@@ -109,7 +109,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               value={currentFocus}
               onChange={handleCurrentFocusChange}
               className={styles.textInput}
-              disabled={!isHost}
+              disabled={!canEditMeta}
             />
           </div>
     
@@ -119,7 +119,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               id="currentLens"
               value={activePlayerId ?? ''}
               onChange={handleCurrentLensChange}
-              disabled={!isHost} // Host Only
+              disabled={!canEditMeta}
               className={styles.selectInput}
             >
               <option value="">(None)</option>
@@ -138,7 +138,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
               type="checkbox"
               checked={isStrictMode}
               onChange={handleStrictModeToggle}
-              disabled={!isHost} // Host Only
+              disabled={!canEditMeta}
               className={styles.toggleSwitch}
             />
           </div>

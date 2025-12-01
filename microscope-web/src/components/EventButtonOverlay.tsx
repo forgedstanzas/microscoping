@@ -4,7 +4,7 @@ import type { TimelineNode } from '../types/timeline';
 import type { LayoutMap } from '../layout/LinearAdapter';
 import type { ViewSettings } from '../types/settings';
 import { useYjsContext } from '../context/YjsContext';
-import { useMeta } from '../hooks/useMeta';
+import { useEntitlements } from '../hooks/useEntitlements';
 
 interface EventButtonOverlayProps {
   nodes: TimelineNode[];
@@ -22,13 +22,9 @@ interface EventButtonPlacement {
 }
 
 export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, layout, layoutConstants, layoutMode, nodeBorderWidth }) => {
-  const { services, myPeerId } = useYjsContext();
-  const { isStrictMode, activePlayerId, hostId } = useMeta();
+  const { services } = useYjsContext();
+  const { canEditNodes } = useEntitlements();
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-
-  const isHost = myPeerId === hostId;
-  const isMyTurn = myPeerId === activePlayerId;
-  const canEdit = !isStrictMode || isMyTurn || isHost;
 
   const eventButtonPlacements = useMemo(() => {
     const placements: EventButtonPlacement[] = [];
@@ -84,13 +80,12 @@ export const EventButtonOverlay: React.FC<EventButtonOverlayProps> = ({ nodes, l
     return placements;
   }, [nodes, layout, layoutConstants, layoutMode]);
 
-  // Rename handleAddEvent to be more specific if needed, but it calls the correct service function
   const handleAddEvent = useCallback((parentId: string) => {
     services.nodeService.addEventToPeriod(parentId);
   }, [services.nodeService]);
 
-  if (!canEdit) {
-    return null; // Do not render the overlay at all if user cannot edit
+  if (!canEditNodes) {
+    return null; // Do not render the overlay at all if user cannot edit nodes
   }
 
   return (

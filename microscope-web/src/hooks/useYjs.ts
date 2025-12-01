@@ -46,6 +46,13 @@ export const useYjs = (roomId: string | null) => {
     const persistence = new IndexeddbPersistence(roomId, newYDoc);
     const webrtcProvider = new WebrtcProvider(roomId, newYDoc, {
       signaling: ['https://microscoping-signaling-server.onrender.com/'],
+      // Add STUN servers for more reliable peer discovery
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+      ],
+      maxConns: 20, // Set maximum number of connections
+      filter: () => true, // Basic filter, can be used for more complex logic
     });
 
     setYdoc(newYDoc);
@@ -88,11 +95,10 @@ export const useYjs = (roomId: string | null) => {
     persistence.on('synced', handlePersistenceSync);
     webrtcProvider.awareness.on('change', handleAwarenessChange);
     
-    // Immediately check sync status and awareness
+    // Immediately check sync status
     if (persistence.synced) {
       handlePersistenceSync({ synced: true });
     }
-    handleAwarenessChange({ added: Array.from(webrtcProvider.awareness.getStates().keys()), updated: [], removed: [] });
 
     return () => {
       console.log(`Y.js: Destroying instance for room: ${roomId}`);
@@ -117,5 +123,5 @@ export const useYjs = (roomId: string | null) => {
     }
   }, [myUsername, provider, isSynced]);
 
-  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus, awareness: provider?.awareness };
+  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus, awareness: provider?.awareness, provider };
 };

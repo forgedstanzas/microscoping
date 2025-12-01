@@ -28,26 +28,31 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
   const currentLensUsername = currentLensPeer ? currentLensPeer.username : 'N/A';
   const iHaveTheTurn = myPeerId === activePlayerId;
 
+  const updatePeerOptions = React.useCallback(() => {
+    if (!peers) {
+      setPeerOptions([]);
+      return;
+    };
+    const options = Array.from(peers.entries())
+      .map(([peerId, peerData]) => ({
+        id: parseInt(peerId), // Parse peerId to number
+        username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
+      }))
+      .sort((a, b) => a.username.localeCompare(b.username));
+    setPeerOptions(options);
+  }, [peers]);
+
   React.useEffect(() => {
     if (!peers) return;
-
-    const updatePeerOptions = () => {
-      const options = Array.from(peers.entries())
-        .map(([peerId, peerData]) => ({
-          id: parseInt(peerId), // Parse peerId to number
-          username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
-        }))
-        .sort((a, b) => a.username.localeCompare(b.username));
-      setPeerOptions(options);
-    };
-
+    
     peers.observe(updatePeerOptions);
-    updatePeerOptions(); // Initial population
+    // Manually call once to set the initial state, as Y.Map.observe does not fire with initial content.
+    updatePeerOptions(); 
 
     return () => {
       peers.unobserve(updatePeerOptions);
     };
-  }, [peers]);
+  }, [peers, updatePeerOptions]);
 
   React.useEffect(() => {
     // When the turn changes or peers change, pre-select the next player in the dropdown.

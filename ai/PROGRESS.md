@@ -2,7 +2,7 @@
 
 This document tracks the implementation progress for the Microscope Web project.
 
-*Last Updated: 2025-11-27*
+*Last Updated: 2025-11-30*
 
 ---
 
@@ -72,47 +72,24 @@ This phase focused on improving the internal architecture of the application to 
   - A `useNodeLayout` hook was created to encapsulate the complex logic of measuring and calculating node positions, dramatically simplifying `Canvas.tsx`.
 
 ---
-## ➡️ Current Status
+## ✅ Completed Steps (Post-Phase 5 Debugging and Refactoring)
 
-- **Phase 5 Complete:** The Lobby, Connection UX, and Turn Management System are fully implemented.
-- **Next Step:** Awaiting feedback and planning for the next phase.
+This phase addressed various bugs, improved stability, and implemented granular permission controls.
+
+- **Fixed TypeScript Errors:** Resolved numerous TypeScript compilation errors across various components and hooks.
+- **Corrected Linear Layout Event Positioning:** Ensured all events in the linear layout are positioned correctly below their parent periods.
+- **Vite Base URL Configuration:** Implemented dynamic `base` URL setting in `vite.config.ts` to allow correct local development while maintaining GitHub Pages deployment configuration.
+- **Resolved "Loading Session..." Issue:** Fixed a race condition in `useYjs.ts` that caused the application to get stuck on the loading screen by decoupling the Y.js connection lifecycle from username awareness updates.
+- **Host Display in Connected Peers:** Changed the host display in the connected peers list from bolding to a `(Host)` suffix for consistency.
+- **"Pass Turn To" Dropdown Default:** Configured the "Pass Turn To" dropdown to default to the next player in the turn order.
+- **Improved Host/Turn Management on Disconnect:** Implemented robust logic in `YjsProvider` to correctly re-assign the turn if the `activePlayerId` disconnects, and fixed a host election race condition where new clients could steal host status.
+- **Dynamic Legacy Coloring:** Implemented a new system for legacy lines to pull colors from a rotating array of contrasting colors, improving visual distinctiveness.
+- **Fixed Palette Add Word Issue:** Resolved a bug preventing words from being added to the affirmed/banned palette lists by making `usePalette` null-safe.
+- **Granular Entitlements Refactor:** Implemented a new `useEntitlements` hook and refactored `MetadataTab.tsx`, `TimelineNode.tsx`, and `EventButtonOverlay.tsx` to use it, establishing granular permissions for editing metadata vs. timeline nodes.
+- **Fixed WebRTC Connection & Peer List Discrepancy:** Addressed a fundamental WebRTC peer-to-peer connection failure by adding STUN servers to the `WebrtcProvider` configuration. Resolved an empty/incorrect connected peers list display issue by correctly managing initial state population in `YjsProvider` and `SideboardSettings.tsx` on component mount.
 
 ---
-## 🧪 Testing Steps for Turn Management System
+## ➡️ Current Status
 
-To test the new turn management system, you will need to run two instances of the application in separate browser windows or tabs.
-
-### Setup:
-1.  Start the application (`npm run dev` in the `microscope-web` directory).
-2.  Open the first browser window (let's call it **User A**) and create a new session. **User A** is now the host and should have the turn.
-3.  Copy the session URL (which includes the `?room=` parameter) from **User A**'s browser.
-4.  Open the second browser window (let's call it **User B**) and paste the session URL to join the same session.
-
-### Test Cases:
-1.  **Verify Initial Turn:**
-    -   In **User A**'s window, navigate to the "Settings" tab in the sideboard.
-    -   **Expected:** You should see "Current Turn: [User A's username] (You)" and the "Pass Turn" controls should be visible.
-    -   In **User B**'s window, navigate to the "Settings" tab.
-    -   **Expected:** You should see "Current Turn: [User A's username]" and the "Pass Turn" controls should *not* be visible.
-
-2.  **Verify Permission Enforcement (User B - No Turn):**
-    -   As **User B**, try to perform actions that modify the timeline:
-        -   Add a new Period or Event.
-        -   Try to edit the description of an existing node.
-        -   Try to delete a node.
-    -   **Expected:** None of these actions should succeed. Check the browser's developer console for warnings like "Not allowed to add node. Not the active player."
-
-3.  **Verify Permission (User A - Has Turn):**
-    -   As **User A**, add a new Period or Event.
-    -   **Expected:** The action should succeed, and the new node should appear in both **User A**'s and **User B**'s windows.
-
-4.  **Verify Turn Passing:**
-    -   As **User A**, in the "Settings" tab, select **User B** from the "Pass Turn To:" dropdown and click the "Pass Turn" button.
-    -   **Expected (User A's window):** The "Current Turn" should now display **User B**'s name. The "Pass Turn" controls should disappear.
-    -   **Expected (User B's window):** The "Current Turn" should now display "[User B's username] (You)". The "Pass Turn" controls should appear.
-
-5.  **Verify Permission After Turn Pass:**
-    -   As **User A**, try to add a new node.
-    -   **Expected:** The action should fail.
-    -   As **User B**, try to add a new node.
-    -   **Expected:** The action should succeed.
+- **All phases complete.** The application is now in a stable, feature-complete state.
+- **Next Step:** Awaiting final review.
