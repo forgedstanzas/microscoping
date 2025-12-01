@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Canvas } from './components/Canvas';
 import { Sideboard } from './components/Sideboard';
 import { StatusIndicator } from './components/StatusIndicator';
