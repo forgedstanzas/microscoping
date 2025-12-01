@@ -23,7 +23,6 @@
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
 
 .button {
@@ -40,6 +39,10 @@
 
 .button:hover {
   background-color: var(--button-hover-bg);
+}
+
+.spaced {
+  margin-top: 0.75rem;
 }
 
 .inline-button-group {

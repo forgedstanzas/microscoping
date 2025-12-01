@@ -244,7 +244,7 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
           </a>
         </div>
         {deferredInstallPrompt && (
-            <button onClick={handleInstallClick} className={styles.button}>
+            <button onClick={handleInstallClick} className={`${styles.button} ${styles.spaced}`}>
               Install App
             </button>
         )}
