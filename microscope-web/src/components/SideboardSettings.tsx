@@ -49,7 +49,7 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
       setPeerOptions([]);
       return;
     };
-    const options = Array.from(awareness.getStates().entries())
+    const options = (Array.from(awareness.getStates().entries()) as Array<[number, Record<string, any>]>)
       .map(([clientId, clientState]: [number, Record<string, any>]) => ({
         id: clientId,
         username: (clientState.user?.name as string) || `Guest-${String(clientId).substring(0,4)}`

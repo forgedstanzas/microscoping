@@ -21,7 +21,7 @@ export default class NodeService {
    * @param ydoc The Y.js document to operate on.
    * @param peerId The ID of the current peer.
    */
-  constructor(ydoc: Y.Doc, peerId: number) {
+  constructor(ydoc: Y.Doc) {
     this.ydoc = ydoc;
     this.nodesMap = ydoc.getMap<TimelineNode>('nodes');
     this.metaMap = ydoc.getMap<any>('meta');

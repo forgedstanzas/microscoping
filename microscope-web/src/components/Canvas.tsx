@@ -21,7 +21,7 @@ interface CanvasProps {
 }
 
 export function Canvas({ affirmedWords, bannedWords, layoutConstants }: CanvasProps) {
-  const { services, myPeerId, peers, ydoc, awareness } = useYjsContext();
+  const { services, myPeerId, ydoc, awareness } = useYjsContext();
   const { layoutMode, selectedLegacy } = useUIState();
   const { isStrictMode, activePlayerId } = useMeta();
   const nodes = useNodes(ydoc);

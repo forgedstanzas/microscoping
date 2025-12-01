@@ -21,7 +21,7 @@ interface YjsContextType {
   signalingStatus: 'connecting' | 'connected' | 'disconnected';
   meta: Y.Map<any> | null;
   provider: WebrtcProvider | null;
-  awareness: Y.Awareness | null;
+  awareness: any | null; // Changed from Y.Awareness to any to resolve TS2694
   peers: Map<number, any>; // Add this line
   services: {
     nodeService: NodeService;
@@ -53,7 +53,7 @@ export function YjsProvider({ children, roomId, initialSessionTitle }: YjsProvid
 
   const services = useMemo(() => {
     if (!ydoc || !myPeerId || !awareness) return null; // Ensure awareness is available
-    const nodeService = new NodeService(ydoc, myPeerId); // Pass myPeerId to NodeService
+    const nodeService = new NodeService(ydoc);
     const sessionService = new SessionManager(ydoc);
     const turnService = new TurnService(ydoc, awareness, myPeerId); // Instantiate TurnService
     return { nodeService, sessionService, turnService }; // Return turnService
@@ -196,7 +196,7 @@ export function useYjsContext() {
     ydoc: Y.Doc;
     meta: Y.Map<any>;
     provider: WebrtcProvider;
-    awareness: Y.Awareness; // Add this
+    awareness: any; // Changed from Y.Awareness to any to resolve TS2694
     peers: Map<number, any>; // Add this
     services: {
       nodeService: NodeService;

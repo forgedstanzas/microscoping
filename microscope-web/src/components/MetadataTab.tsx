@@ -52,7 +52,7 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
     const updatePeers = () => {
       const states = awareness.getStates();
       // Update peer options for dropdown
-      const options = Array.from(states.entries())
+      const options = (Array.from(states.entries()) as Array<[number, Record<string, any>]>)
         .map(([clientId, clientState]: [number, Record<string, any>]) => ({
           id: clientId,
           username: (clientState.user?.name as string) || `Guest-${String(clientId).substring(0,4)}`
