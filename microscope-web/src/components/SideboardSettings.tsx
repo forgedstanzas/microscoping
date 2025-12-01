@@ -240,12 +240,14 @@ export function SideboardSettings({ viewSettings, deferredInstallPrompt }: Sideb
               Install App
             </button>
         )}
-        <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer" className={styles.button}>
-          View on GitHub
-        </a>
-        <a href={import.meta.env.BASE_URL} className={styles.button}>
-          Return to Lobby
-        </a>
+        <div className={styles.inlineButtonGroup}>
+          <a href="https://github.com/forgedstanzas/microscoping" target="_blank" rel="noopener noreferrer" className={styles.button}>
+            View on GitHub
+          </a>
+          <a href={import.meta.env.BASE_URL} className={styles.button}>
+            Return to Lobby
+          </a>
+        </div>
       </div>
     </div>
   );
