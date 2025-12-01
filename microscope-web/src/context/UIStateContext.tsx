@@ -19,7 +19,7 @@ interface UIStateProviderProps {
 }
 
 export function UIStateProvider({ children }: UIStateProviderProps) {
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('zigzag');
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('linear');
   const [selectedLegacy, setSelectedLegacy] = useState<string | null>(null);
 
   const value = {

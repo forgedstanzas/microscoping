@@ -15,7 +15,6 @@ const generateDefaultUsername = () => `Guest-${Math.floor(Math.random() * 900) +
 export const useYjs = (roomId: string | null) => {
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [meta, setMeta] = useState<Y.Map<any> | null>(null);
-  const [peers, setPeers] = useState<Y.Map<any> | null>(null);
   const [provider, setProvider] = useState<WebrtcProvider | null>(null);
   const [isSynced, setIsSynced] = useState(false);
   const [myPeerId, setMyPeerId] = useState<number | null>(null);
@@ -41,7 +40,6 @@ export const useYjs = (roomId: string | null) => {
     console.log(`useYjs: Setting up new Y.js instance for room: ${roomId}`);
     const newYDoc = new Y.Doc();
     const newMeta = newYDoc.getMap<any>('meta');
-    const newPeers = newYDoc.getMap<any>('peers');
 
     const persistence = new IndexeddbPersistence(roomId, newYDoc);
     const webrtcProvider = new WebrtcProvider(roomId, newYDoc, {
@@ -50,7 +48,6 @@ export const useYjs = (roomId: string | null) => {
 
     setYdoc(newYDoc);
     setMeta(newMeta);
-    setPeers(newPeers);
     setProvider(webrtcProvider);
     setMyPeerId(webrtcProvider.awareness.clientID);
     
@@ -66,27 +63,9 @@ export const useYjs = (roomId: string | null) => {
         console.log(`useYjs: Synced with IndexedDB for room: ${roomId}.`);
       }
     };
-    
-    const handleAwarenessChange = (changes: { added: number[], updated: number[], removed: number[] }) => {
-      const states = webrtcProvider.awareness.getStates();
-      newYDoc.transact(() => {
-        changes.added.forEach(clientId => {
-          const userState = states.get(clientId)?.user;
-          if (userState) newPeers.set(String(clientId), userState);
-        });
-        changes.updated.forEach(clientId => {
-          const userState = states.get(clientId)?.user;
-          if (userState) newPeers.set(String(clientId), userState);
-        });
-        changes.removed.forEach(clientId => {
-          newPeers.delete(String(clientId));
-        });
-      });
-    };
 
     webrtcProvider.on('status', handleSignalingStatus);
     persistence.on('synced', handlePersistenceSync);
-    webrtcProvider.awareness.on('change', handleAwarenessChange);
     
     // Immediately check sync status
     if (persistence.synced) {
@@ -101,7 +80,6 @@ export const useYjs = (roomId: string | null) => {
       
       setYdoc(null);
       setMeta(null);
-      setPeers(null);
       setProvider(null);
       setIsSynced(false);
       setMyPeerId(null);
@@ -116,5 +94,5 @@ export const useYjs = (roomId: string | null) => {
     }
   }, [myUsername, provider, isSynced]);
 
-  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, peers, signalingStatus, awareness: provider?.awareness, provider };
+  return { ydoc, isSynced, myPeerId, myUsername, setMyUsername, meta, signalingStatus, awareness: provider?.awareness, provider };
 };

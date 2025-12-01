@@ -9,53 +9,67 @@ import { useYjsContext } from '../context/YjsContext';
 import { useMeta } from '../hooks/useMeta';
 import { useUIState } from '../context/UIStateContext';
 
+
 interface SideboardSettingsProps {
   viewSettings: ReturnType<typeof useViewSettings>;
+  deferredInstallPrompt: any; // Using `any` for simplicity with PWA prompt event
 }
 
-export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
-  const { services, peers, myPeerId } = useYjsContext(); // Added myPeerId
+export function SideboardSettings({ viewSettings, deferredInstallPrompt }: SideboardSettingsProps) {
+  const { services, myPeerId, awareness } = useYjsContext();
   const { hostId, activePlayerId } = useMeta();
+
   const { layoutMode, setLayoutMode } = useUIState();
   const { applySettings, resetSettings, shareSettings } = viewSettings;
   const { showAlert, showConfirm } = useModal();
-  const [selectedPeerToPassTurn, setSelectedPeerToPassTurn] = React.useState<number | null>(null); // State for selected peer
+  const [selectedPeerToPassTurn, setSelectedPeerToPassTurn] = React.useState<number | null>(null);
+
+  const handleInstallClick = async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      // The prompt can only be used once. The `appinstalled` event will clear the state.
+    }
+  };
 
   // --- Peer List Logic ---
-  const [peerOptions, setPeerOptions] = React.useState<Array<{id: number, username: string}>>([]); // Changed id to number
+  const [peerOptions, setPeerOptions] = React.useState<Array<{id: number, username: string}>>([]);
   
   const currentLensPeer = peerOptions.find(peer => peer.id === activePlayerId);
   const currentLensUsername = currentLensPeer ? currentLensPeer.username : 'N/A';
   const iHaveTheTurn = myPeerId === activePlayerId;
 
   const updatePeerOptions = React.useCallback(() => {
-    if (!peers) {
+    if (!awareness) {
       setPeerOptions([]);
       return;
     };
-    const options = Array.from(peers.entries())
-      .map(([peerId, peerData]) => ({
-        id: parseInt(peerId), // Parse peerId to number
-        username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
+    const options = Array.from(awareness.getStates().entries())
+      .map(([clientId, clientState]) => ({
+        id: clientId,
+        username: clientState.user?.name || `Guest-${String(clientId).substring(0,4)}`
       }))
       .sort((a, b) => a.username.localeCompare(b.username));
     setPeerOptions(options);
-  }, [peers]);
+  }, [awareness]);
 
   React.useEffect(() => {
-    if (!peers) return;
+    if (!awareness) return;
     
-    peers.observe(updatePeerOptions);
-    // Manually call once to set the initial state, as Y.Map.observe does not fire with initial content.
-    updatePeerOptions(); 
+    awareness.on('change', updatePeerOptions);
+    updatePeerOptions(); // Manual call to populate initial state
 
     return () => {
-      peers.unobserve(updatePeerOptions);
+      awareness.off('change', updatePeerOptions);
     };
-  }, [peers, updatePeerOptions]);
+  }, [awareness, updatePeerOptions]);
 
   React.useEffect(() => {
-    // When the turn changes or peers change, pre-select the next player in the dropdown.
     if (iHaveTheTurn && peerOptions.length > 1 && services.turnService) {
         const nextPlayerId = services.turnService.getNextPlayerInTurn();
         setSelectedPeerToPassTurn(nextPlayerId);
@@ -70,6 +84,8 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
     }
   };
   // --- End Peer List Logic ---
+
+
 
   const handleExportClick = () => {
     services.sessionService.exportSession();
@@ -140,6 +156,18 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
 
       <hr className={styles.divider} />
 
+      {deferredInstallPrompt && (
+        <>
+          <h3>Application</h3>
+          <div className={styles.buttonGroup}>
+            <button onClick={handleInstallClick} className={styles.button}>
+              Install App
+            </button>
+          </div>
+          <hr className={styles.divider} />
+        </>
+      )}
+
       <h3>Session Data</h3>
       <div className={styles.buttonGroup}>
         <button onClick={handleExportClick} className={styles.button}>
@@ -152,20 +180,24 @@ export function SideboardSettings({ viewSettings }: SideboardSettingsProps) {
 
       <hr className={styles.divider} />
 
-      <h3>View Configuration</h3>
-      <div className={styles.buttonGroup}>
-        <button onClick={handleUploadSettingsClick} className={styles.button}>
-          Upload View
-        </button>
-        <button onClick={shareSettings} className={styles.button}>
-          Share View
-        </button>
-        <button onClick={resetSettings} className={styles.button}>
-          Reset View
-        </button>
-      </div>
+      {false && (
+        <>
+          <h3>View Configuration</h3>
+          <div className={styles.buttonGroup}>
+            <button onClick={handleUploadSettingsClick} className={styles.button}>
+              Upload View
+            </button>
+            <button onClick={shareSettings} className={styles.button}>
+              Share View
+            </button>
+            <button onClick={resetSettings} className={styles.button}>
+              Reset View
+            </button>
+          </div>
+        </>
+      )}
 
-      <hr className={styles.divider} />
+
 
       <h3>Connected Peers</h3>
       <p>Current Turn: <strong>{currentLensUsername}</strong> {iHaveTheTurn && '(You)'}</p>

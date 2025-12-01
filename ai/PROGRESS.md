@@ -50,46 +50,41 @@ Phase 4 was a major polish and feature-expansion phase that prepared the applica
 ### Step 1: The Lobby & Connection UX
 - **Status:** Complete
 - **Details:** The application was refactored to support multiple rooms, and a full lobby experience was created.
-  - **Multi-Room Architecture:** The core data layer (`useYjs`) and all services (`NodeService`, `SessionManager`, `useViewSettings`, etc.) were refactored to be dependent on a room-specific `Y.Doc` instance, removing the old singleton pattern.
-  - **Lobby UI:** A `Lobby.tsx` component was created to serve as the application's entry point. It allows users to create a new room, join an existing room via a code, or rejoin a recent session.
-  - **Session Naming:** The "Create Room" flow was updated to include an input for the "History Title," which is now saved as part of the session's metadata.
-  - **Recent Sessions List:** The lobby now displays a clickable list of recently visited sessions, which is persisted in the browser's IndexedDB.
-  - **Host Election:** Logic was implemented in `App.tsx` to ensure there is always a host. When joining a room, if the previous host is not present, the first user to join becomes the new host.
-  - **UI/UX Polish:**
-    - The `ThemeSwitcher` was added to the Lobby screen for early access.
-    - Placeholder text ("Describe the Period...") was added to Period and Event description boxes to guide users.
-    - A `META_KEYS` constants file was created and integrated throughout the codebase to prevent key mismatch bugs when accessing Y.js metadata, improving overall code quality.
+  - **Multi-Room Architecture:** The core data layer (`useYjs`) and all services (`NodeService`, `SessionManager`, `useViewSettings`, etc.) were refactore dependent on a room-specific `Y.Doc` instance.
+  - **Lobby UI:** A `Lobby.tsx` component was created to allow users to create, join, or rejoin a session.
+  - **Recent Sessions List:** The lobby now displays a clickable list of recently visited sessions.
+  - **Host Election:** Logic was implemented to ensure a host is always present.
 
----
-## ✅ Completed Steps (Code Quality & Refactoring Phase)
+### Step 2: Turn Management System
+- **Status:** Complete
+- **Details:** Implemented a "Strict Mode" for turn-based play, enforced by the `useEntitlements` hook.
+  - **Core Logic:** `TurnService` handles turn passing, and `useEntitlements` is the single source of truth for permissions (`canEditNodes`, `canEditMeta`).
+  - **UI Enforcement:** `TimelineNode` and `EventButtonOverlay` are disabled for users whose turn it is not in strict mode.
+  - **Host Controls:** The "Strict Turn Order" toggle is now consolidated on the Metadata tab for the host, along with UI to display the current turn and allow the active player to pass it.
 
-This phase focused on improving the internal architecture of the application to enhance maintainability, reduce complexity, and make future development easier and more robust.
-- **Y.js React Context:** The prop drilling of `ydoc` and related state was eliminated by creating a `YjsProvider` and a `useYjsContext` hook. All Y.js-dependent logic (initialization, host election, session management) was centralized in this provider, decoupling components.
-- **Instantiated, Context-Aware Services:** Static services (`NodeService`, `SessionManager`) were converted into classes that are instantiated once per session and provided through the new `YjsContext`. This simplified the service API and made component logic cleaner.
-- **Strongly Typed `meta` Map:** A `MetaMapSchema` interface, `META_KEYS` constants, and a new `useMeta` hook were created to provide compile-time type safety for all interactions with the global metadata map, preventing common bugs.
-- **Component Decomposition:** Large components were simplified by extracting logic into dedicated hooks and contexts.
-  - A `UIStateContext` was created to manage global, non-collaborative UI state (`layoutMode`, `selectedLegacy`), decoupling `App.tsx` from its children.
-  - A `useNodeLayout` hook was created to encapsulate the complex logic of measuring and calculating node positions, dramatically simplifying `Canvas.tsx`.
-
----
-## ✅ Completed Steps (Post-Phase 5 Debugging and Refactoring)
-
-This phase addressed various bugs, improved stability, and implemented granular permission controls.
-
-- **Fixed TypeScript Errors:** Resolved numerous TypeScript compilation errors across various components and hooks.
-- **Corrected Linear Layout Event Positioning:** Ensured all events in the linear layout are positioned correctly below their parent periods.
-- **Vite Base URL Configuration:** Implemented dynamic `base` URL setting in `vite.config.ts` to allow correct local development while maintaining GitHub Pages deployment configuration.
-- **Resolved "Loading Session..." Issue:** Fixed a race condition in `useYjs.ts` that caused the application to get stuck on the loading screen by decoupling the Y.js connection lifecycle from username awareness updates.
-- **Host Display in Connected Peers:** Changed the host display in the connected peers list from bolding to a `(Host)` suffix for consistency.
-- **"Pass Turn To" Dropdown Default:** Configured the "Pass Turn To" dropdown to default to the next player in the turn order.
-- **Improved Host/Turn Management on Disconnect:** Implemented robust logic in `YjsProvider` to correctly re-assign the turn if the `activePlayerId` disconnects, and fixed a host election race condition where new clients could steal host status.
-- **Dynamic Legacy Coloring:** Implemented a new system for legacy lines to pull colors from a rotating array of contrasting colors, improving visual distinctiveness.
-- **Fixed Palette Add Word Issue:** Resolved a bug preventing words from being added to the affirmed/banned palette lists by making `usePalette` null-safe.
-- **Granular Entitlements Refactor:** Implemented a new `useEntitlements` hook and refactored `MetadataTab.tsx`, `TimelineNode.tsx`, and `EventButtonOverlay.tsx` to use it, establishing granular permissions for editing metadata vs. timeline nodes.
-- **Fixed WebRTC Connection & Peer List Discrepancy:** Addressed a fundamental WebRTC peer-to-peer connection failure by adding STUN servers to the `WebrtcProvider` configuration. Resolved an empty/incorrect connected peers list display issue by correctly managing initial state population in `YjsProvider` and `SideboardSettings.tsx` on component mount.
+### Step 3: PWA & Offline Support
+- **Status:** Complete
+- **Details:** The application was configured as a Progressive Web App (PWA).
+  - `vite-plugin-pwa` was installed and configured.
+  - A manifest and service worker are now generated, and placeholder icons have been added.
 
 ---
 ## ➡️ Current Status
 
-- **All phases complete.** The application is now in a stable, feature-complete state.
-- **Next Step:** Awaiting final review.
+- **Phase 5 in progress.** Steps 1, 2, and 3 are complete. Step 4 (Tutorial & Rules Reference) is pending.
+
+---
+## ⚠️ Potential Future Issues
+
+This section documents architectural issues that have been resolved but whose patterns might still exist elsewhere in the code or could be accidentally re-introduced.
+
+### Yjs Observer Pattern & Strict Mode
+
+- **Symptom:** The list of connected peers would show duplicate entries, and peer usernames would be incorrect, especially when re-joining a session from the "Recent Sessions" list.
+- **Root Cause Analysis:**
+    1.  **Architectural Flaw:** The primary issue was that `YjsProvider` was responsible for both rendering the `<Lobby>` and the main app. When a user joined a room, `YjsProvider` would change what it rendered, causing React's Strict Mode to unmount and re-mount the entire provider. This created two concurrent connection attempts, leading to race conditions.
+    2.  **Brittle Pattern:** Several components and hooks used a brittle pattern for syncing Yjs data to React state. They would initialize state with an empty value (`useState([])`) and then use a `useEffect` hook to both set up an observer *and* manually call an update function. This manual call was a workaround for the incorrect initial state and was the direct cause of double-processing issues when the component re-mounted.
+- **Solution:**
+    1.  **Architectural Refactor:** The logic for determining the `roomId` was lifted out of `YjsProvider` and into `App.tsx`. The `App` component now acts as a router, rendering either the `<Lobby>` or a stable `<YjsProvider>` that is always mounted with a valid `roomId`. This resolved the unmount/remount cycle.
+    2.  **Canonical Pattern Enforcement:** All identified instances of the brittle observer pattern (`SideboardSettings.tsx`, `MetadataTab.tsx`, `usePalette.ts`) were refactored to use the correct, canonical pattern: `useState(() => yjsType.toArray())`. This initializes the state correctly on the first render and makes the manual update call unnecessary.
+- **Risk / Going Forward:** Any new component that needs to display reactive data from a Yjs map or array **must** follow the canonical pattern of initializing its state directly from the Yjs data type in the `useState` initializer. The brittle `useEffect` + manual call pattern should be considered an anti-pattern and be avoided.

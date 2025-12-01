@@ -1,95 +1,103 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import * as Y from 'yjs';
 
 /**
  * A hook for interacting with the shared palette of affirmed and banned words
- * within a specific Y.js document.
+ * within a specific Y.js document. This hook is reactive to the asynchronous
+ * creation of the palette data structures.
  *
  * @param ydoc The Y.js document to connect to.
  * @returns An object containing the live lists of words and functions to modify them.
  */
 export const usePalette = (ydoc: Y.Doc | null) => {
-  // Use useMemo to get stable references to the Y.Arrays, only if ydoc is available.
-  const { yAffirmedWords, yBannedWords } = useMemo(() => {
-    if (!ydoc) {
-      return { yAffirmedWords: null, yBannedWords: null };
-    }
-    const paletteMap = ydoc.getMap('palette');
-    if (!paletteMap.has('affirmedWords')) {
-      paletteMap.set('affirmedWords', new Y.Array<string>());
-    }
-    if (!paletteMap.has('bannedWords')) {
-      paletteMap.set('bannedWords', new Y.Array<string>());
-    }
-    const yAffirmed = paletteMap.get('affirmedWords') as Y.Array<string>;
-    const yBanned = paletteMap.get('bannedWords') as Y.Array<string>;
-    return { yAffirmedWords: yAffirmed, yBannedWords: yBanned };
-  }, [ydoc]);
+  const [yAffirmedWords, setYAffirmedWords] = useState<Y.Array<string> | null>(null);
+  const [yBannedWords, setYBannedWords] = useState<Y.Array<string> | null>(null);
 
   const [affirmedWords, setAffirmedWords] = useState<string[]>([]);
   const [bannedWords, setBannedWords] = useState<string[]>([]);
 
+  // Effect 1: Observe the paletteMap and set the Y.Array states
   useEffect(() => {
-    if (!yAffirmedWords || !yBannedWords) {
-      // If the Y.Arrays aren't available, ensure the state is empty.
-      setAffirmedWords([]);
-      setBannedWords([]);
-      return;
-    }
+    if (!ydoc) return;
 
-    const handleAffirmedChange = () => setAffirmedWords(yAffirmedWords.toArray());
-    const handleBannedChange = () => setBannedWords(yBannedWords.toArray());
+    const paletteMap = ydoc.getMap('palette');
 
-    yAffirmedWords.observe(handleAffirmedChange);
-    yBannedWords.observe(handleBannedChange);
+    const checkAndSetArrays = () => {
+      const affirmed = paletteMap.get('affirmedWords') as Y.Array<string> | undefined;
+      const banned = paletteMap.get('bannedWords') as Y.Array<string> | undefined;
 
-    // Initial sync
-    handleAffirmedChange();
-    handleBannedChange();
+      if (affirmed) {
+        setYAffirmedWords(affirmed);
+        setAffirmedWords(affirmed.toArray());
+      }
+      if (banned) {
+        setYBannedWords(banned);
+        setBannedWords(banned.toArray());
+      }
+    };
+
+    // Check immediately and also observe for future changes (when YjsProvider initializes it)
+    checkAndSetArrays();
+    paletteMap.observe(checkAndSetArrays);
 
     return () => {
-      yAffirmedWords.unobserve(handleAffirmedChange);
-      yBannedWords.unobserve(handleBannedChange);
+      paletteMap.unobserve(checkAndSetArrays);
     };
-  }, [yAffirmedWords, yBannedWords]);
+  }, [ydoc]);
+
+  // Effect 2: Observe the Y.Arrays once they are available
+  useEffect(() => {
+    if (!yAffirmedWords) return;
+    const handleAffirmedChange = () => setAffirmedWords(yAffirmedWords.toArray());
+    yAffirmedWords.observe(handleAffirmedChange);
+    return () => yAffirmedWords.unobserve(handleAffirmedChange);
+  }, [yAffirmedWords]);
+
+  useEffect(() => {
+    if (!yBannedWords) return;
+    const handleBannedChange = () => setBannedWords(yBannedWords.toArray());
+    yBannedWords.observe(handleBannedChange);
+    return () => yBannedWords.unobserve(handleBannedChange);
+  }, [yBannedWords]);
+
 
   const addAffirmedWord = useCallback((word: string) => {
-    if (word && ydoc && yAffirmedWords && !yAffirmedWords.toArray().includes(word)) {
-      ydoc.transact(() => {
+    if (word && yAffirmedWords && !yAffirmedWords.toArray().includes(word)) {
+      yAffirmedWords.doc?.transact(() => {
         yAffirmedWords.push([word]);
       });
     }
-  }, [ydoc, yAffirmedWords]);
+  }, [yAffirmedWords]);
 
   const removeAffirmedWord = useCallback((word: string) => {
-    if (ydoc && yAffirmedWords) {
+    if (yAffirmedWords) {
       const index = yAffirmedWords.toArray().indexOf(word);
       if (index > -1) {
-        ydoc.transact(() => {
+        yAffirmedWords.doc?.transact(() => {
           yAffirmedWords.delete(index, 1);
         });
       }
     }
-  }, [ydoc, yAffirmedWords]);
+  }, [yAffirmedWords]);
 
   const addBannedWord = useCallback((word: string) => {
-    if (word && ydoc && yBannedWords && !yBannedWords.toArray().includes(word)) {
-      ydoc.transact(() => {
+    if (word && yBannedWords && !yBannedWords.toArray().includes(word)) {
+      yBannedWords.doc?.transact(() => {
         yBannedWords.push([word]);
       });
     }
-  }, [ydoc, yBannedWords]);
+  }, [yBannedWords]);
 
   const removeBannedWord = useCallback((word: string) => {
-    if (ydoc && yBannedWords) {
+    if (yBannedWords) {
       const index = yBannedWords.toArray().indexOf(word);
       if (index > -1) {
-        ydoc.transact(() => {
+        yBannedWords.doc?.transact(() => {
           yBannedWords.delete(index, 1);
         });
       }
     }
-  }, [ydoc, yBannedWords]);
+  }, [yBannedWords]);
 
   return {
     affirmedWords,

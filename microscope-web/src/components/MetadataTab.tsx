@@ -11,7 +11,7 @@ interface MetadataTabProps {
 }
 
 export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: MetadataTabProps) {
-  const { services, myPeerId, myUsername, peers } = useYjsContext();
+  const { services, myPeerId, myUsername, awareness } = useYjsContext();
   const metaState = useMeta();
   const { isHost, canEditMeta } = useEntitlements();
 
@@ -40,37 +40,38 @@ export function MetadataTab({ isMetadataCollapsed, setIsMetadataCollapsed }: Met
 
   // Handler for Strict Mode toggle
   const handleStrictModeToggle = () => {
-    services.nodeService.setIsStrictMode(!isStrictMode);
+    services.nodeService.setStrictMode(!isStrictMode);
   };
 
-  const [peerOptions, setPeerOptions] = React.useState<Array<{id: string, username: string}>>([]);
+  const [peerOptions, setPeerOptions] = React.useState<Array<{id: number, username: string}>>([]);
   const [hostUsername, setHostUsername] = React.useState('N/A');
 
   React.useEffect(() => {
-    if (!peers) return;
+    if (!awareness) return;
 
     const updatePeers = () => {
+      const states = awareness.getStates();
       // Update peer options for dropdown
-      const options = Array.from(peers.entries())
-        .map(([peerId, peerData]) => ({
-          id: peerId,
-          username: peerData.name || `Guest-${String(peerId).substring(0,4)}`
+      const options = Array.from(states.entries())
+        .map(([clientId, clientState]) => ({
+          id: clientId,
+          username: clientState.user?.name || `Guest-${String(clientId).substring(0,4)}`
         }))
         .sort((a, b) => a.username.localeCompare(b.username));
       setPeerOptions(options);
 
       // Update host username
-      const currentHostUsername = hostId ? peers.get(String(hostId))?.name || 'N/A' : 'N/A';
-      setHostUsername(currentHostUsername);
+      const currentHostState = hostId ? states.get(hostId) : undefined;
+      setHostUsername(currentHostState?.user?.name || 'N/A');
     };
 
-    peers.observe(updatePeers);
+    awareness.on('change', updatePeers);
     updatePeers(); // Initial population
 
     return () => {
-      peers.unobserve(updatePeers);
+      awareness.off('change', updatePeers);
     };
-  }, [peers, hostId]);
+  }, [awareness, hostId]);
 
   return (
     <div className={styles.metadataTab}>

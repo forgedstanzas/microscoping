@@ -79,7 +79,31 @@ The application now has a clear, three-tiered state management strategy.
 
 ---
 
-## 4. Key Logic Flows
+## 4. Permissions and Authorization
+
+The application follows a strict pattern for handling user permissions.
+
+-   **Single Source of Truth:** The `useEntitlements()` hook (`src/hooks/useEntitlements.ts`) is the definitive source for what the current user is allowed to do. It centralizes all business logic for permissions (e.g., "is the user the host?", "is it the user's turn?").
+-   **UI as Gatekeeper:** UI components are responsible for using the `useEntitlements` hook to conditionally render UI elements or disable them. For example, a button that only a host can click must be wrapped in a check like `{isHost && <button />}` or have its `disabled` attribute set to `!isHost`.
+-   **Services are Executors, Not Authorizers:** Service methods (e.g., in `NodeService`) should **NOT** contain their own internal permission checks. They are designed to execute a data operation when called. The responsibility for authorizing that action lies exclusively with the UI layer. This separation of concerns makes the codebase easier to maintain and reason about.
+
+**Correct Pattern:**
+```typescript
+// In a UI Component
+const { canEditMeta } = useEntitlements();
+const { services } = useYjsContext();
+
+// The service method is only called if the entitlement check passes in the UI.
+const handleClick = () => {
+  if (canEditMeta) {
+    services.nodeService.setHistoryTitle("New Title");
+  }
+};
+```
+
+---
+
+## 5. Key Logic Flows
 
 ### Application Startup
 1.  `main.tsx` renders all providers, with `<App />` as the child.
@@ -99,7 +123,7 @@ The `useMeta` hook ensures `DisplayComponent` automatically re-renders when the 
 
 ---
 
-## 5. New Conventions & Anti-Patterns to AVOID
+## 6. New Conventions & Anti-Patterns to AVOID
 
 -   **DO NOT** pass `ydoc`, `meta`, `peers`, or `services` as props. Components must get this state from the `useYjsContext` or `useMeta` hooks.
 -   **DO NOT** import `NodeService` or `SessionManager` directly into a component to call a method. Get the *instance* from `useYjsContext().services`.

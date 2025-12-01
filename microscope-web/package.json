@@ -1,5 +1,5 @@
 {
-  "name": "microscope-web",
+  "name": "Microscoping",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -20,6 +20,7 @@
     "react-dom": "^19.2.0",
     "react-zoom-pan-pinch": "^3.7.0",
     "uuid": "^13.0.0",
+    "vite-plugin-pwa": "^1.2.0",
     "y-indexeddb": "^9.0.12",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.27"

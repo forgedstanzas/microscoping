@@ -13,12 +13,13 @@ import { useUIState } from '../context/UIStateContext';
 interface SideboardProps {
   palette: ReturnType<typeof usePalette>;
   viewSettings: ReturnType<typeof useViewSettings>;
+  deferredInstallPrompt: any; // Using `any` for simplicity with PWA prompt event
 }
 
 // Define the sections in their priority order (highest to lowest)
 const SECTIONS_IN_PRIORITY = ['meta', 'palette', 'legacies'];
 
-export function Sideboard({ palette, viewSettings }: SideboardProps) {
+export function Sideboard({ palette, viewSettings, deferredInstallPrompt }: SideboardProps) {
   useYjsContext();
   const { layoutMode, setLayoutMode, selectedLegacy, setSelectedLegacy } = useUIState();
   const sideboardRef = useRef<HTMLDivElement>(null);
@@ -147,7 +148,7 @@ export function Sideboard({ palette, viewSettings }: SideboardProps) {
     currentTabs.push({ 
       id: 'settings', 
       title: 'Settings', 
-      content: <SideboardSettings viewSettings={viewSettings} /> 
+      content: <SideboardSettings viewSettings={viewSettings} deferredInstallPrompt={deferredInstallPrompt} /> 
     });
 
     return currentTabs;

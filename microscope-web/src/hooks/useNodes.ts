@@ -16,6 +16,7 @@ export function useNodes(ydoc: Y.Doc): TimelineNode[] {
 
   useEffect(() => {
     const handleChange = () => {
+      console.log('[useNodes.handleChange] Nodes observer fired. New node count:', nodesMap.size);
       setNodes(Array.from(nodesMap.values()));
     };
 

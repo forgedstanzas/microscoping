@@ -20,7 +20,6 @@ interface YjsContextType {
   myUsername: string;
   signalingStatus: 'connecting' | 'connected' | 'disconnected';
   meta: Y.Map<any> | null;
-  peers: Y.Map<any> | null;
   provider: WebrtcProvider | null; // Add this
   services: {
     nodeService: NodeService;
@@ -33,39 +32,17 @@ const YjsContext = createContext<YjsContextType | null>(null);
 
 interface YjsProviderProps {
   children: React.ReactNode;
+  roomId: string;
+  initialSessionTitle: string | null;
 }
 
-export function YjsProvider({ children }: YjsProviderProps) {
-  const [roomId, setRoomIdInternal] = useState<string | null>(null);
-  const [initialSessionTitle, setInitialSessionTitle] = useState<string | null>(null);
-  const { showAlert } = useModal();
+export function YjsProvider({ children, roomId, initialSessionTitle }: YjsProviderProps) {
 
-  const onJoinRoom = (id: string, title?: string) => {
-    console.log(`YjsProvider: Attempting to join room '${id}' with initial title: '${title || 'none'}'`);
-    setInitialSessionTitle(title !== undefined ? title : null);
-    setRoomIdInternal(id);
-  };
   
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlRoomId = urlParams.get('room');
-    if (urlRoomId) {
-      onJoinRoom(urlRoomId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (roomId) {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get('room') !== roomId) {
-        url.searchParams.set('room', roomId);
-        window.history.pushState({}, '', url.toString());
-      }
-    }
-  }, [roomId]);
+  const { showAlert } = useModal();
   
   const yjsState = useYjsHook(roomId);
-  const { ydoc, isSynced, myPeerId, meta, peers, myUsername, setMyUsername, signalingStatus, awareness, provider } = yjsState;
+  const { ydoc, isSynced, myPeerId, meta, myUsername, signalingStatus, awareness, provider } = yjsState;
 
   const services = useMemo(() => {
     if (!ydoc || !myPeerId || !awareness) return null; // Ensure awareness is available
@@ -77,10 +54,10 @@ export function YjsProvider({ children }: YjsProviderProps) {
 
   // Effect for deferred one-time setup of a new document.
   useEffect(() => {
-    if (isSynced && services && ydoc && myPeerId !== null && peers && meta) { // Added meta
+    if (isSynced && services && ydoc && myPeerId !== null && awareness && meta) { // Added meta
       const initTimeout = setTimeout(() => {
         const nodesMap = ydoc.getMap('nodes');
-        const peerCount = peers.size;
+        const peerCount = awareness.getStates().size;
         const currentHostId = meta.get(META_KEYS.HOST_ID);
         
         console.log(`YjsProvider: Final initialization check after ${INIT_DELAY}ms. Nodes map size: ${nodesMap.size}, Peer count: ${peerCount}, Host: ${currentHostId}`);
@@ -92,6 +69,12 @@ export function YjsProvider({ children }: YjsProviderProps) {
             console.log(`YjsProvider: We are alone and intended to create. Initializing document and setting self as host.`);
             services.nodeService.addNode({ type: 'period', title: 'Start Period', isBookend: true, order: 0 });
             services.nodeService.addNode({ type: 'period', title: 'End Period', isBookend: true, order: 1 });
+            
+            // Also initialize the palette
+            const paletteMap = ydoc.getMap('palette');
+            paletteMap.set('affirmedWords', new Y.Array<string>());
+            paletteMap.set('bannedWords', new Y.Array<string>());
+
             services.nodeService.setHostId(myPeerId); // Set self as host
             if (initialSessionTitle) {
               services.nodeService.setHistoryTitle(initialSessionTitle);
@@ -100,7 +83,7 @@ export function YjsProvider({ children }: YjsProviderProps) {
           } else if (peerCount > 1 && currentHostId === undefined) {
              // We are not alone, but no host is set. This means we are joining a new session simultaneously.
              // The peer with the lowest ID will become host.
-             const connectedPeerIds = Array.from(peers.keys()).map(id => parseInt(id, 10));
+             const connectedPeerIds = Array.from(awareness.getStates().keys());
              if (!connectedPeerIds.includes(myPeerId)) connectedPeerIds.push(myPeerId);
              const newHostId = Math.min(...connectedPeerIds);
              if (myPeerId === newHostId) {
@@ -118,7 +101,7 @@ export function YjsProvider({ children }: YjsProviderProps) {
 
       return () => clearTimeout(initTimeout);
     }
-  }, [isSynced, services, ydoc, myPeerId, peers, meta, initialSessionTitle, roomId, showAlert]);
+  }, [isSynced, services, ydoc, myPeerId, awareness, meta, initialSessionTitle, roomId, showAlert]);
 
   // Effect to keep the 'recent sessions' list up-to-date
   useEffect(() => {
@@ -138,11 +121,11 @@ export function YjsProvider({ children }: YjsProviderProps) {
 
   // Effect to handle host re-election and turn management for disconnected players
   useEffect(() => {
-    if (isSynced && services && myPeerId !== null && meta && peers && provider) { // Added provider
+    if (isSynced && services && myPeerId !== null && meta && awareness && provider) { // Added provider
       const handleStateChecks = () => {
         const currentHostId = meta.get(META_KEYS.HOST_ID) as number | undefined;
         const activePlayerId = meta.get(META_KEYS.ACTIVE_PLAYER_ID) as number | undefined;
-        const connectedPeerIds = Array.from(peers.keys()).map(id => parseInt(id, 10));
+        const connectedPeerIds = Array.from(awareness.getStates().keys());
         const amHost = myPeerId === currentHostId;
 
         // 1. Host Re-election Logic: Only run if a host was previously set and has now disconnected.
@@ -170,15 +153,14 @@ export function YjsProvider({ children }: YjsProviderProps) {
         }
       };
 
-      peers.observe(handleStateChecks);
-      // Manually call once to set the initial state, as Y.Map.observe does not fire with initial content.
-      handleStateChecks(); 
+      awareness.on('change', handleStateChecks);
+      handleStateChecks(); // Call once to handle initial state
 
       return () => {
-        peers.unobserve(handleStateChecks);
+        awareness.off('change', handleStateChecks);
       };
     }
-  }, [isSynced, services, myPeerId, meta, peers, provider, awareness]); // Added provider and awareness to dependencies
+  }, [isSynced, services, myPeerId, meta, provider, awareness]); // Added provider and awareness to dependencies
   
   // Effect to manage the NodeService lifecycle
   useEffect(() => {
@@ -186,17 +168,13 @@ export function YjsProvider({ children }: YjsProviderProps) {
       services?.nodeService.destroy();
     };
   }, [services]);
-
-  if (!roomId) {
-    return <Lobby onJoinRoom={onJoinRoom} myUsername={myUsername} setMyUsername={setMyUsername} />;
-  }
   
-  if (!ydoc || !meta || !peers || !services) {
+  if (!ydoc || !meta || !services) {
     return <div>Loading Session...</div>;
   }
 
   return (
-    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, peers, services, signalingStatus, provider }}>
+    <YjsContext.Provider value={{ ...yjsState, ydoc, meta, services, signalingStatus, provider }}>
       {children}
     </YjsContext.Provider>
   );
@@ -210,7 +188,6 @@ export function useYjsContext() {
   return context as YjsContextType & {
     ydoc: Y.Doc;
     meta: Y.Map<any>;
-    peers: Y.Map<any>;
     provider: WebrtcProvider; // And this
     services: {
       nodeService: NodeService;
