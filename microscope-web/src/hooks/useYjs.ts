@@ -46,8 +46,6 @@ export const useYjs = (roomId: string | null) => {
     const persistence = new IndexeddbPersistence(roomId, newYDoc);
     const webrtcProvider = new WebrtcProvider(roomId, newYDoc, {
       signaling: ['https://microscoping-signaling-server.onrender.com/'],
-      maxConns: 20, // Set maximum number of connections
-      filter: () => true, // Basic filter, can be used for more complex logic
     });
 
     setYdoc(newYDoc);
